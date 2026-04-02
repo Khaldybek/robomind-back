@@ -575,25 +575,35 @@ export class GamificationService {
   }> {
     const row = await this.getOrCreate(userId);
 
-    const schoolFilter = schoolId
-      ? `AND u.school_id = '${schoolId}'`
-      : '';
-
-    const [{ rank, total }] = await this.gamRepo.query(
-      `
+    const [{ rank, total }] = schoolId
+      ? await this.gamRepo.query(
+          `
       SELECT
         (SELECT COUNT(*) + 1 FROM users u2
            INNER JOIN user_gamification g2 ON g2.user_id = u2.id
            WHERE u2.is_active = true AND u2.role = 'student'
-           ${schoolFilter}
+           AND u2.school_id = $2
            AND g2.xp > $1) AS rank,
         (SELECT COUNT(*) FROM users u3
            INNER JOIN user_gamification g3 ON g3.user_id = u3.id
            WHERE u3.is_active = true AND u3.role = 'student'
-           ${schoolFilter}) AS total
+           AND u3.school_id = $2) AS total
       `,
-      [row.xp],
-    ) as [{ rank: string; total: string }];
+          [row.xp, schoolId],
+        )
+      : await this.gamRepo.query(
+          `
+      SELECT
+        (SELECT COUNT(*) + 1 FROM users u2
+           INNER JOIN user_gamification g2 ON g2.user_id = u2.id
+           WHERE u2.is_active = true AND u2.role = 'student'
+           AND g2.xp > $1) AS rank,
+        (SELECT COUNT(*) FROM users u3
+           INNER JOIN user_gamification g3 ON g3.user_id = u3.id
+           WHERE u3.is_active = true AND u3.role = 'student') AS total
+      `,
+          [row.xp],
+        );
 
     return {
       rank: parseInt(rank, 10) || null,

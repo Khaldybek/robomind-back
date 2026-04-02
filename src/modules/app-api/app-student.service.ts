@@ -362,15 +362,22 @@ export class AppStudentService {
       where: { courseId, isPublished: true },
       order: { order: 'ASC', id: 'ASC' },
     });
-    return mods.map((m) => ({
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      order: m.order,
-      unlockAfterModuleId: m.unlockAfterModuleId,
-      createdAt: m.createdAt,
-      updatedAt: m.updatedAt,
-    }));
+    return {
+      course: {
+        id: course.id,
+        title: course.title,
+        thumbnailUrl: course.thumbnailUrl,
+      },
+      modules: mods.map((m) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        order: m.order,
+        unlockAfterModuleId: m.unlockAfterModuleId,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+      })),
+    };
   }
 
   async getModuleContent(userId: string, moduleId: string) {

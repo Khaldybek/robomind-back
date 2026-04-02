@@ -23,6 +23,8 @@ import {
   RefreshToken,
   PasswordResetToken,
   ModuleHomeworkSubmission,
+  UserGamification,
+  UserBadge,
 } from './entities';
 
 const entities = [
@@ -47,6 +49,8 @@ const entities = [
   RefreshToken,
   PasswordResetToken,
   ModuleHomeworkSubmission,
+  UserGamification,
+  UserBadge,
 ];
 
 @Module({

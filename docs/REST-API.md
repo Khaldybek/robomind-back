@@ -53,7 +53,7 @@
 | Метод | Путь |
 |-------|------|
 | GET | `/app/courses` | Курсы с активным доступом |
-| GET | `/app/courses/:courseId/modules` | Модули (с учётом открытости по тестам) |
+| GET | `/app/courses/:courseId/modules` | Курс + модули (`course`, `modules`) |
 | GET | `/app/modules/:moduleId/content` | Контент модуля |
 | GET | `/app/modules/:moduleId/quiz` | Данные теста (без ключей ответов в проде) |
 

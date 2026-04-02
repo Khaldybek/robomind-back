@@ -55,7 +55,7 @@
 | Метод | Путь | Описание |
 |--------|------|----------|
 | GET | `/app/courses` | Курсы с действующим доступом |
-| GET | `/app/courses/:courseId/modules` | Модули курса |
+| GET | `/app/courses/:courseId/modules` | Курс (id, title, thumbnailUrl) + модули |
 | GET | `/app/modules/:moduleId/content` | Контент модуля |
 | GET | `/app/modules/:moduleId/quiz` | Тест (без `isCorrect` у ответов) |
 | PATCH | `/app/modules/:moduleId/progress` | Обновление прогресса (`PatchModuleProgressDto`) |

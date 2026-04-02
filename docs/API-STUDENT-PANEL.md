@@ -38,7 +38,7 @@
 | GET | `/app/users/me/progress` | — | массив прогресса по модулям |
 | GET | `/app/users/me/certificates` | — | сертификаты |
 | GET | `/app/courses` | — | курсы с доступом |
-| GET | `/app/courses/:courseId/modules` | — | модули курса |
+| GET | `/app/courses/:courseId/modules` | — | `course` (id, title, thumbnailUrl) + `modules[]` |
 | GET | `/app/modules/:moduleId/content` | — | блоки контента |
 | GET | `/app/modules/:moduleId/quiz` | — | тест (вопросы с `answers`, без правильных) |
 | PATCH | `/app/modules/:moduleId/progress` | опц. `watchedSeconds`, `status`, `completed` | запись прогресса |
@@ -211,6 +211,10 @@
 
 ---
 
+**Футер панели ученика** не отдаётся с бэка: лого, ссылки и текст задаются **во фронтенд-приложении** (как на лендинге — общий компонент или `public/`).
+
+---
+
 ## 3. Профиль
 
 ### `GET /app/users/me`
@@ -259,8 +263,35 @@
 
 | Вход | `courseId` — UUID в пути |
 
-**Ответ `200`:** для каждого опубликованного модуля: `id`, `title`, `description`, `order`, `unlockAfterModuleId`, `createdAt`, `updatedAt`.  
+**Ответ `200`:** объект с полями **`course`** и **`modules`**:
+
+- **`course`:** `id`, `title`, **`thumbnailUrl`** (обложка, может быть `null`; часто путь вида `/api/v1/files/images/...`).
+- **`modules`:** массив опубликованных модулей — для каждого: `id`, `title`, `description`, `order`, `unlockAfterModuleId`, `createdAt`, `updatedAt`.
+
 Флаги «заблокирован / пройден» на фронте считают по `GET /app/users/me/progress` и `unlockAfterModuleId`.
+
+Пример:
+
+```json
+{
+  "course": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Робототехника для начинающих",
+    "thumbnailUrl": "/api/v1/files/images/abc123.webp"
+  },
+  "modules": [
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "title": "Введение",
+      "description": null,
+      "order": 0,
+      "unlockAfterModuleId": null,
+      "createdAt": "2025-03-01T10:00:00.000Z",
+      "updatedAt": "2025-03-15T14:30:00.000Z"
+    }
+  ]
+}
+```
 
 ---
 
