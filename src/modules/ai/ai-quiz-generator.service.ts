@@ -47,6 +47,8 @@ ${moduleText.slice(0, 20_000)}
       return [];
     }
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, questionCount).filter((q) => q.text && Array.isArray(q.answers));
+    return parsed
+      .slice(0, questionCount)
+      .filter((q) => q.text && Array.isArray(q.answers));
   }
 }

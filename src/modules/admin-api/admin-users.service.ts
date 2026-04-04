@@ -85,16 +85,17 @@ export class AdminUsersService {
       role: u.role,
       isActive: u.isActive,
       schoolId: u.schoolId,
-      school: s
-        ? { id: s.id, name: s.name, number: s.number }
-        : null,
+      school: s ? { id: s.id, name: s.name, number: s.number } : null,
       avatarUrl: u.avatarUrl,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };
   }
 
-  private assertSchoolForRole(role: UserRole, schoolId: string | null | undefined) {
+  private assertSchoolForRole(
+    role: UserRole,
+    schoolId: string | null | undefined,
+  ) {
     if (role === UserRole.STUDENT || role === UserRole.SCHOOL_ADMIN) {
       if (!schoolId) {
         throw new BadRequestException(
@@ -118,7 +119,9 @@ export class AdminUsersService {
 
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       qb.andWhere('u.school_id = :sid', { sid: actor.schoolId });
       qb.andWhere('u.role = :st', { st: UserRole.STUDENT });
@@ -179,7 +182,11 @@ export class AdminUsersService {
     if (!u) throw new NotFoundException('Пользователь не найден');
 
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
       if (
@@ -195,8 +202,7 @@ export class AdminUsersService {
     }
 
     const nextRole = dto.role ?? u.role;
-    let nextSchool =
-      dto.schoolId !== undefined ? dto.schoolId : u.schoolId;
+    let nextSchool = dto.schoolId !== undefined ? dto.schoolId : u.schoolId;
     if (dto.role === UserRole.SUPER_ADMIN) {
       nextSchool = null;
     }
@@ -244,11 +250,18 @@ export class AdminUsersService {
     return this.getUser(id, actor);
   }
 
-  async activateUser(id: string, actor: AuthUserPayload): Promise<AdminUserPublic> {
+  async activateUser(
+    id: string,
+    actor: AuthUserPayload,
+  ): Promise<AdminUserPublic> {
     const u = await this.users.findOne({ where: { id } });
     if (!u) throw new NotFoundException('Пользователь не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
     }
@@ -261,7 +274,11 @@ export class AdminUsersService {
     const u = await this.users.findOne({ where: { id: userId } });
     if (!u) throw new NotFoundException('Пользователь не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
     }
@@ -288,7 +305,11 @@ export class AdminUsersService {
     const u = await this.users.findOne({ where: { id: userId } });
     if (!u) throw new NotFoundException('Пользователь не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
     }
@@ -313,7 +334,11 @@ export class AdminUsersService {
     const u = await this.users.findOne({ where: { id: userId } });
     if (!u) throw new NotFoundException('Пользователь не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
     }
@@ -361,7 +386,9 @@ export class AdminUsersService {
     errors: StudentImportErrorRow[];
   }> {
     if (actor.role !== UserRole.SCHOOL_ADMIN || !actor.schoolId) {
-      throw new ForbiddenException('Импорт доступен только администратору школы');
+      throw new ForbiddenException(
+        'Импорт доступен только администратору школы',
+      );
     }
 
     const schoolOk = await this.schools.exist({
@@ -535,7 +562,9 @@ export class AdminUsersService {
   /** CSV учеников школы (только school_admin) */
   async exportStudentsCsv(actor: AuthUserPayload): Promise<string> {
     if (actor.role !== UserRole.SCHOOL_ADMIN || !actor.schoolId) {
-      throw new ForbiddenException('Экспорт доступен только администратору школы');
+      throw new ForbiddenException(
+        'Экспорт доступен только администратору школы',
+      );
     }
     const rows = await this.users.find({
       where: { schoolId: actor.schoolId, role: UserRole.STUDENT },
@@ -571,7 +600,9 @@ export class AdminUsersService {
 
   async deleteUser(id: string, actor: AuthUserPayload): Promise<void> {
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      throw new ForbiddenException('Админ школы не может удалять пользователей');
+      throw new ForbiddenException(
+        'Админ школы не может удалять пользователей',
+      );
     }
     const u = await this.users.findOne({ where: { id } });
     if (!u) throw new NotFoundException('Пользователь не найден');

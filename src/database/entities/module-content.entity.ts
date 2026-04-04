@@ -44,7 +44,12 @@ export class ModuleContent {
   @Column({ type: 'int', default: 0 })
   order: number;
 
-  @Column({ name: 'livestream_url', type: 'varchar', length: 1024, nullable: true })
+  @Column({
+    name: 'livestream_url',
+    type: 'varchar',
+    length: 1024,
+    nullable: true,
+  })
   livestreamUrl: string | null;
 
   @Column({ name: 'livestream_starts_at', type: 'timestamptz', nullable: true })

@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { ProgressStatus } from '../../../database/enums';
 
 export class PatchModuleProgressDto {

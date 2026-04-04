@@ -32,7 +32,10 @@ export class CourseAccess {
   @Column({ name: 'granted_by', type: 'uuid', nullable: true })
   grantedBy: string | null;
 
-  @ManyToOne(() => User, (u) => u.grantedCourseAccesses, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => User, (u) => u.grantedCourseAccesses, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'granted_by' })
   grantedByUser: User | null;
 

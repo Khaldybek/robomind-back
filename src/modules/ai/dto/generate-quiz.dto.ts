@@ -1,4 +1,13 @@
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class AiGenerateQuizDto {
   @IsOptional()

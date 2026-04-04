@@ -118,7 +118,10 @@ export class AdminCoursesService {
     return map;
   }
 
-  private applySort(qb: ReturnType<Repository<Course>['createQueryBuilder']>, sort: AdminCourseListSort) {
+  private applySort(
+    qb: ReturnType<Repository<Course>['createQueryBuilder']>,
+    sort: AdminCourseListSort,
+  ) {
     switch (sort) {
       case AdminCourseListSort.CREATED_AT_DESC:
         qb.orderBy('c.createdAt', 'DESC').addOrderBy('c.id', 'ASC');

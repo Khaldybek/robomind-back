@@ -74,9 +74,7 @@ export class AdminCertificatesService {
             lastName: c.user.lastName,
           }
         : undefined,
-      course: c.course
-        ? { id: c.course.id, title: c.course.title }
-        : undefined,
+      course: c.course ? { id: c.course.id, title: c.course.title } : undefined,
     };
   }
 

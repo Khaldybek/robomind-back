@@ -248,7 +248,10 @@ export class AppStudentService {
     }
 
     if (dto.watchedSeconds !== undefined) {
-      row.watchedSeconds = Math.max(row.watchedSeconds ?? 0, dto.watchedSeconds);
+      row.watchedSeconds = Math.max(
+        row.watchedSeconds ?? 0,
+        dto.watchedSeconds,
+      );
       if (row.status === ProgressStatus.NOT_STARTED) {
         row.status = ProgressStatus.IN_PROGRESS;
       }
@@ -295,7 +298,12 @@ export class AppStudentService {
     const row = await this.courseAccess.findOne({
       where: [
         { userId, courseId, revokedAt: IsNull(), expiresAt: IsNull() },
-        { userId, courseId, revokedAt: IsNull(), expiresAt: MoreThan(new Date()) },
+        {
+          userId,
+          courseId,
+          revokedAt: IsNull(),
+          expiresAt: MoreThan(new Date()),
+        },
       ],
     });
     if (!row) {
@@ -505,11 +513,7 @@ export class AppStudentService {
     };
   }
 
-  private gradeQuestion(
-    q: Question,
-    ansRows: Answer[],
-    raw: unknown,
-  ): boolean {
+  private gradeQuestion(q: Question, ansRows: Answer[], raw: unknown): boolean {
     if (q.type === QuestionType.TEXT) {
       const text = typeof raw === 'string' ? raw.trim() : '';
       const ref = (q.referenceAnswer ?? '').trim();

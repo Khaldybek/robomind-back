@@ -10,7 +10,10 @@ import {
 import { User } from './user.entity';
 
 @Entity('admin_notifications')
-@Index('IDX_admin_notifications_recipient_unread', ['recipientUserId', 'readAt'])
+@Index('IDX_admin_notifications_recipient_unread', [
+  'recipientUserId',
+  'readAt',
+])
 export class AdminNotification {
   @PrimaryGeneratedColumn('uuid')
   id: string;

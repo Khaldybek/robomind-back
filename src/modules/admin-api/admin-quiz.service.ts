@@ -112,10 +112,7 @@ export class AdminQuizService {
    * Заменить вопросы теста набором из ИИ (POST /admin/ai/quiz/generate → сюда).
    * Если теста нет — создаётся. Если есть попытки — 409.
    */
-  async importGeneratedQuestions(
-    moduleId: string,
-    dto: ApplyGeneratedQuizDto,
-  ) {
+  async importGeneratedQuestions(moduleId: string, dto: ApplyGeneratedQuizDto) {
     if (!dto.questions?.length) {
       throw new BadRequestException('Массив questions пуст');
     }
@@ -181,7 +178,8 @@ export class AdminQuizService {
     if (dto.title !== undefined) q.title = dto.title.trim();
     if (dto.passingScore !== undefined) q.passingScore = dto.passingScore;
     if (dto.maxAttempts !== undefined) q.maxAttempts = dto.maxAttempts;
-    if (dto.timeLimitMinutes !== undefined) q.timeLimitMinutes = dto.timeLimitMinutes;
+    if (dto.timeLimitMinutes !== undefined)
+      q.timeLimitMinutes = dto.timeLimitMinutes;
     if (dto.shuffleQuestions !== undefined) {
       q.shuffleQuestions = dto.shuffleQuestions;
     }

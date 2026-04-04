@@ -88,9 +88,7 @@ export class AdminQuizController {
 
   @Delete('questions/:questionId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteQuestion(
-    @Param('questionId', ParseUUIDPipe) questionId: string,
-  ) {
+  async deleteQuestion(@Param('questionId', ParseUUIDPipe) questionId: string) {
     await this.quiz.deleteQuestion(questionId);
   }
 

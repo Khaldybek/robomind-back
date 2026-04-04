@@ -74,16 +74,30 @@ function cellToString(value: CellValue | null | undefined): string {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'object' && value !== null) {
-    if ('text' in value && typeof (value as { text?: string }).text === 'string') {
+    if (
+      'text' in value &&
+      typeof (value as { text?: string }).text === 'string'
+    ) {
       return (value as { text: string }).text;
     }
-    if ('richText' in value && Array.isArray((value as { richText: { text: string }[] }).richText)) {
-      return (value as { richText: { text: string }[] }).richText.map((t) => t.text).join('');
+    if (
+      'richText' in value &&
+      Array.isArray((value as { richText: { text: string }[] }).richText)
+    ) {
+      return (value as { richText: { text: string }[] }).richText
+        .map((t) => t.text)
+        .join('');
     }
-    if ('result' in value && (value as { result?: CellValue }).result !== undefined) {
+    if (
+      'result' in value &&
+      (value as { result?: CellValue }).result !== undefined
+    ) {
       return cellToString((value as { result: CellValue }).result);
     }
-    if ('hyperlink' in value && typeof (value as { text?: string }).text === 'string') {
+    if (
+      'hyperlink' in value &&
+      typeof (value as { text?: string }).text === 'string'
+    ) {
       return (value as { text: string }).text;
     }
   }
@@ -111,8 +125,7 @@ export async function parseStudentImportXlsx(
   } catch {
     return {
       ok: false,
-      message:
-        'Не удалось прочитать файл. Ожидается .xlsx (Excel 2007+).',
+      message: 'Не удалось прочитать файл. Ожидается .xlsx (Excel 2007+).',
     };
   }
 
@@ -189,7 +202,8 @@ export async function parseStudentImportXlsx(
   if (rows.length === 0) {
     return {
       ok: false,
-      message: 'Нет строк с данными (проверьте, что данные начинаются со 2-й строки)',
+      message:
+        'Нет строк с данными (проверьте, что данные начинаются со 2-й строки)',
     };
   }
 

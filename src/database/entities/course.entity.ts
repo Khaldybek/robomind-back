@@ -26,7 +26,12 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ name: 'thumbnail_url', type: 'varchar', length: 1024, nullable: true })
+  @Column({
+    name: 'thumbnail_url',
+    type: 'varchar',
+    length: 1024,
+    nullable: true,
+  })
   thumbnailUrl: string | null;
 
   @Column({

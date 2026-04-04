@@ -2,10 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 
 /** SSL для облачных Postgres (Neon, Supabase, Vercel Postgres и т.д.) */
-function sslFromEnv():
-  | boolean
-  | { rejectUnauthorized: boolean }
-  | undefined {
+function sslFromEnv(): boolean | { rejectUnauthorized: boolean } | undefined {
   if (process.env.DB_SSL !== 'true') return undefined;
   return { rejectUnauthorized: false };
 }

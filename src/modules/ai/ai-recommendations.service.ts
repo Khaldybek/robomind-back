@@ -112,9 +112,7 @@ repeatModuleIds — UUID модулей для повторения, если и
       temperature: 0.5,
     });
 
-    const raw =
-      completion.choices[0]?.message?.content?.trim() ??
-      '{}';
+    const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
     const json = raw.replace(/^```json\s*|\s*```$/g, '').trim();
     let data: RecommendationsPayload;
     try {

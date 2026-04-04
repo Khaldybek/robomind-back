@@ -145,7 +145,9 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string) {
     const hash = this.hashPasswordResetToken(token);
-    const row = await this.passwordResets.findOne({ where: { tokenHash: hash } });
+    const row = await this.passwordResets.findOne({
+      where: { tokenHash: hash },
+    });
     if (!row || row.expiresAt.getTime() < Date.now()) {
       if (row) await this.passwordResets.delete({ id: row.id });
       throw new BadRequestException('Недействительный или истёкший токен');
@@ -218,7 +220,8 @@ export class AuthService {
       throw new UnauthorizedException('Неверный email или пароль');
     }
 
-    const skipPassword = this.config.get<string>('AUTH_SKIP_PASSWORD') === 'true';
+    const skipPassword =
+      this.config.get<string>('AUTH_SKIP_PASSWORD') === 'true';
     if (!skipPassword) {
       const ok = await bcrypt.compare(dto.password, user.passwordHash);
       if (!ok) {
@@ -278,7 +281,9 @@ export class AuthService {
       if (row) {
         await this.refreshTokens.delete({ id: row.id });
       }
-      throw new UnauthorizedException('Недействительный или истёкший refresh-токен');
+      throw new UnauthorizedException(
+        'Недействительный или истёкший refresh-токен',
+      );
     }
 
     const user = await this.users.findOne({ where: { id: row.userId } });

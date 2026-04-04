@@ -190,7 +190,9 @@ export class AdminModulesService {
       );
     }
     if (excludeModuleId && unlockId === excludeModuleId) {
-      throw new BadRequestException('Модуль не может разблокироваться сам собой');
+      throw new BadRequestException(
+        'Модуль не может разблокироваться сам собой',
+      );
     }
   }
 
@@ -305,22 +307,20 @@ export class AdminModulesService {
     return this.moduleRow(mod, 0, 0, false, null);
   }
 
-  async patchModule(id: string, dto: PatchAdminModuleDto): Promise<AdminModuleRow> {
+  async patchModule(
+    id: string,
+    dto: PatchAdminModuleDto,
+  ): Promise<AdminModuleRow> {
     const m = await this.modules.findOne({ where: { id } });
     if (!m) throw new NotFoundException('Модуль не найден');
     if (dto.title !== undefined) m.title = dto.title.trim();
     if (dto.description !== undefined) {
-      m.description =
-        dto.description === null ? null : dto.description.trim();
+      m.description = dto.description === null ? null : dto.description.trim();
     }
     if (dto.order !== undefined) m.order = dto.order;
     if (dto.isPublished !== undefined) m.isPublished = dto.isPublished;
     if (dto.unlockAfterModuleId !== undefined) {
-      await this.assertUnlockModule(
-        m.courseId,
-        dto.unlockAfterModuleId,
-        id,
-      );
+      await this.assertUnlockModule(m.courseId, dto.unlockAfterModuleId, id);
       m.unlockAfterModuleId = dto.unlockAfterModuleId;
     }
     await this.modules.save(m);

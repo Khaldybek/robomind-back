@@ -82,7 +82,9 @@ export class AdminCoursesController {
     @UploadedFile() thumbnail?: Express.Multer.File,
   ) {
     if (user.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Только супер-администратор может создавать курсы');
+      throw new ForbiddenException(
+        'Только супер-администратор может создавать курсы',
+      );
     }
     const payload =
       thumbnail != null
@@ -185,7 +187,9 @@ export class AdminCoursesController {
     @UploadedFile() thumbnail?: Express.Multer.File,
   ) {
     if (user.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Только супер-администратор может редактировать курсы');
+      throw new ForbiddenException(
+        'Только супер-администратор может редактировать курсы',
+      );
     }
     const payload =
       thumbnail != null
@@ -201,7 +205,9 @@ export class AdminCoursesController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
   ) {
     if (user.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Только супер-администратор может удалять курсы');
+      throw new ForbiddenException(
+        'Только супер-администратор может удалять курсы',
+      );
     }
     await this.courses.deleteCourse(courseId);
   }

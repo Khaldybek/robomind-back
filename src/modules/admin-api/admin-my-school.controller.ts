@@ -19,7 +19,9 @@ export class AdminMySchoolController {
   @Get('my-school')
   getMySchool(@CurrentUser() user: AuthUserPayload) {
     if (!user.schoolId) {
-      throw new ForbiddenException('У администратора не задана школа (schoolId)');
+      throw new ForbiddenException(
+        'У администратора не задана школа (schoolId)',
+      );
     }
     return this.geo.getSchoolProfileForSchoolAdmin(user.schoolId);
   }

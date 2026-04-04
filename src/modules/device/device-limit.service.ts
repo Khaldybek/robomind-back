@@ -53,7 +53,10 @@ export class DeviceLimitService {
    * Для school_admin / super_admin — без ограничения.
    */
   async registerOnLogin(
-    user: Pick<User, 'id' | 'role' | 'schoolId' | 'firstName' | 'lastName' | 'email'>,
+    user: Pick<
+      User,
+      'id' | 'role' | 'schoolId' | 'firstName' | 'lastName' | 'email'
+    >,
     deviceIdRaw: string | undefined,
     meta: DeviceClientMeta,
   ): Promise<RegisterDeviceResult> {

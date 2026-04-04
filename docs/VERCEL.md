@@ -22,8 +22,10 @@
 
 ### Настройки проекта на vercel.com
 
-- **Framework Preset:** Other (или пусто).
+- **Framework Preset:** Other (или пусто). В `vercel.json` задано **`"framework": null`**, чтобы не включался авто-пресет Nest без нужных признаков.
 - **Output Directory:** не задавать и не **`public`** — оставить по умолчанию / пусто, иначе снова будет ошибка про entrypoint.
+
+В **`src/main.ts`** оставлен прямой импорт **`@nestjs/core`** (и `void NestFactory`) — иначе сборка Vercel может выдать *«No entrypoint found which imports nestjs»*.
 
 Корень API: **`/api/v1`** (как локально). На проде URL будет вида `https://<project>.vercel.app/api/v1/...`.
 

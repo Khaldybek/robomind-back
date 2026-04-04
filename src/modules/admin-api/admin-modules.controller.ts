@@ -36,7 +36,8 @@ const maxBytesContentUpload =
     (Number(process.env.UPLOAD_MAX_VIDEO_MB) || 512) * 1024 * 1024,
     (Number(process.env.UPLOAD_MAX_IMAGE_MB) || 25) * 1024 * 1024,
     (Number(process.env.UPLOAD_MAX_FILE_MB) || 100) * 1024 * 1024,
-  ) + 1024 * 1024;
+  ) +
+  1024 * 1024;
 
 @Controller('admin/modules')
 @UseGuards(JwtAuthGuard, RolesGuard)

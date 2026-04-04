@@ -111,9 +111,7 @@ export class AdminUploadService {
   private assertSize(maxMb: number, size: number) {
     const max = maxMb * 1024 * 1024;
     if (size > max) {
-      throw new BadRequestException(
-        `Файл больше лимита ${maxMb} МБ`,
-      );
+      throw new BadRequestException(`Файл больше лимита ${maxMb} МБ`);
     }
   }
 
@@ -179,11 +177,6 @@ export class AdminUploadService {
     const fileMb = Number(process.env.UPLOAD_MAX_FILE_MB) || 100;
     const videoMb = Number(process.env.UPLOAD_MAX_VIDEO_MB) || 512;
     const maxMb = Math.max(fileMb, videoMb);
-    return this.processUpload(
-      'files',
-      HOMEWORK_ALLOWED_MIMES,
-      maxMb,
-      file,
-    );
+    return this.processUpload('files', HOMEWORK_ALLOWED_MIMES, maxMb, file);
   }
 }

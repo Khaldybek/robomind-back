@@ -19,9 +19,6 @@ export class AiSummarizeService {
       max_tokens: 400,
       temperature: 0.4,
     });
-    return (
-      completion.choices[0]?.message?.content?.trim() ??
-      ''
-    );
+    return completion.choices[0]?.message?.content?.trim() ?? '';
   }
 }

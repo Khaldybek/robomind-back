@@ -49,8 +49,7 @@ export class ModuleHomeworkService {
       throw new BadRequestException('Прикрепите файл (поле file)');
     }
     const meta = this.upload.homeworkFile(file);
-    const comment =
-      studentComment?.trim().slice(0, 4000) || null;
+    const comment = studentComment?.trim().slice(0, 4000) || null;
 
     const existing = await this.submissions.findOne({
       where: { userId, moduleId: mod.id },
@@ -138,11 +137,15 @@ export class ModuleHomeworkService {
   }> {
     const module = await this.modules.findOne({ where: { id: moduleId } });
     if (!module) throw new NotFoundException('Модуль не найден');
-    const course = await this.courses.findOne({ where: { id: module.courseId } });
+    const course = await this.courses.findOne({
+      where: { id: module.courseId },
+    });
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       if (!course.isPublished) {
         throw new NotFoundException('Курс недоступен');
@@ -185,8 +188,14 @@ export class ModuleHomeworkService {
     return out;
   }
 
-  async listSubmissions(q: ListHomeworkSubmissionsQueryDto, actor: AuthUserPayload) {
-    const { module, course } = await this.assertCanManageModule(q.moduleId, actor);
+  async listSubmissions(
+    q: ListHomeworkSubmissionsQueryDto,
+    actor: AuthUserPayload,
+  ) {
+    const { module, course } = await this.assertCanManageModule(
+      q.moduleId,
+      actor,
+    );
 
     let schoolId: string | undefined;
     if (actor.role === UserRole.SCHOOL_ADMIN) {
@@ -194,9 +203,7 @@ export class ModuleHomeworkService {
     } else if (actor.role === UserRole.SUPER_ADMIN) {
       schoolId = q.schoolId;
       if (!schoolId) {
-        throw new BadRequestException(
-          'Для super_admin укажите query schoolId',
-        );
+        throw new BadRequestException('Для super_admin укажите query schoolId');
       }
     } else {
       throw new ForbiddenException();
@@ -332,7 +339,10 @@ export class ModuleHomeworkService {
     actor: AuthUserPayload,
     schoolIdQuery?: string,
   ) {
-    const { module, course } = await this.assertCanManageModule(moduleId, actor);
+    const { module, course } = await this.assertCanManageModule(
+      moduleId,
+      actor,
+    );
 
     let schoolId: string;
     if (actor.role === UserRole.SCHOOL_ADMIN) {

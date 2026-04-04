@@ -13,12 +13,12 @@ import { BadgeKey, ProgressStatus } from '../../database/enums';
 export const XP = {
   MODULE_COMPLETED: 20,
   QUIZ_PASSED: 50,
-  QUIZ_PERFECT_BONUS: 30,         // score === 100 %
-  QUIZ_FIRST_ATTEMPT_BONUS: 30,   // passed on 1st attempt for that quiz
+  QUIZ_PERFECT_BONUS: 30, // score === 100 %
+  QUIZ_FIRST_ATTEMPT_BONUS: 30, // passed on 1st attempt for that quiz
   COURSE_COMPLETED: 100,
   STREAK_DAILY: 5,
   HOMEWORK_SUBMITTED: 10,
-  HOMEWORK_EXCELLENT_BONUS: 25,   // grade >= 80 % of maxPoints
+  HOMEWORK_EXCELLENT_BONUS: 25, // grade >= 80 % of maxPoints
 } as const;
 
 // ─── Level thresholds (index = level, starts at level 1) ─────────────────────
@@ -26,7 +26,8 @@ export const XP = {
 export const LEVEL_THRESHOLDS = [
   0, 0, 100, 300, 600, 1000, 1600, 2400, 3600, 5400, 8000,
   //  11     12     13     14      15      16      17      18       19      20
-  11_500, 16_000, 22_000, 30_000, 40_000, 52_000, 67_000, 85_000, 107_000, 135_000,
+  11_500, 16_000, 22_000, 30_000, 40_000, 52_000, 67_000, 85_000, 107_000,
+  135_000,
 ] as const;
 
 export function xpToLevel(xp: number): number {
@@ -320,7 +321,9 @@ export class GamificationService {
     });
     const badges: BadgeKey[] = [];
     if (total >= 1)
-      badges.push(...(await this.awardBadgeIfNew(userId, BadgeKey.FIRST_MODULE)));
+      badges.push(
+        ...(await this.awardBadgeIfNew(userId, BadgeKey.FIRST_MODULE)),
+      );
     if (total >= 10)
       badges.push(...(await this.awardBadgeIfNew(userId, BadgeKey.MODULES_10)));
     if (total >= 50)
@@ -368,9 +371,7 @@ export class GamificationService {
         ...(await this.awardBadgeIfNew(userId, BadgeKey.FIRST_COURSE)),
       );
     if (certsTotal >= 3)
-      badges.push(
-        ...(await this.awardBadgeIfNew(userId, BadgeKey.COURSES_3)),
-      );
+      badges.push(...(await this.awardBadgeIfNew(userId, BadgeKey.COURSES_3)));
     return badges;
   }
 
@@ -386,16 +387,14 @@ export class GamificationService {
     const [{ count }] = await this.gamRepo.query(
       `SELECT COUNT(*) AS count FROM module_homework_submissions WHERE user_id = $1`,
       [userId],
-    ) as [{ count: string }];
+    );
     const total = parseInt(count, 10);
     if (total >= 1)
       badges.push(
         ...(await this.awardBadgeIfNew(userId, BadgeKey.HOMEWORK_FIRST)),
       );
     if (total >= 5)
-      badges.push(
-        ...(await this.awardBadgeIfNew(userId, BadgeKey.HOMEWORK_5)),
-      );
+      badges.push(...(await this.awardBadgeIfNew(userId, BadgeKey.HOMEWORK_5)));
     return badges;
   }
 
@@ -429,7 +428,11 @@ export class GamificationService {
     const xpNeeded = nextXp !== null ? nextXp - currentLevelXp : null;
 
     // Прогресс по незаработанным бейджам с числовым условием
-    const progressHints = await this.buildProgressHints(userId, earnedKeys, row);
+    const progressHints = await this.buildProgressHints(
+      userId,
+      earnedKeys,
+      row,
+    );
 
     return {
       xp: row.xp,
@@ -463,11 +466,7 @@ export class GamificationService {
   ): Promise<BadgeProgressHint[]> {
     const hints: BadgeProgressHint[] = [];
 
-    const add = (
-      key: BadgeKey,
-      current: number,
-      target: number,
-    ) => {
+    const add = (key: BadgeKey, current: number, target: number) => {
       if (earned.has(key)) return;
       hints.push({
         key,
@@ -504,7 +503,7 @@ export class GamificationService {
     const [{ count: hwCountStr }] = await this.gamRepo.query(
       `SELECT COUNT(*) AS count FROM module_homework_submissions WHERE user_id = $1`,
       [userId],
-    ) as [{ count: string }];
+    );
     const hwTotal = parseInt(hwCountStr, 10);
     add(BadgeKey.HOMEWORK_FIRST, hwTotal, 1);
     add(BadgeKey.HOMEWORK_5, hwTotal, 5);
@@ -566,7 +565,10 @@ export class GamificationService {
   }
 
   /** Позиция конкретного студента в рейтинге своей школы */
-  async getMyRank(userId: string, schoolId?: string): Promise<{
+  async getMyRank(
+    userId: string,
+    schoolId?: string,
+  ): Promise<{
     rank: number | null;
     total: number;
     xp: number;

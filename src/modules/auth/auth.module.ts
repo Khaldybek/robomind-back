@@ -33,7 +33,11 @@ import { RolesGuard } from './guards/roles.guard';
         return {
           secret,
           signOptions: {
-            expiresIn: expiresIn as `${number}m` | `${number}h` | `${number}d` | `${number}s`,
+            expiresIn: expiresIn as
+              | `${number}m`
+              | `${number}h`
+              | `${number}d`
+              | `${number}s`,
           },
         };
       },

@@ -92,7 +92,9 @@ export class AdminAiController {
   }
 
   @Post('transcribe')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }),
+  )
   async transcribe(
     @UploadedFile()
     file:

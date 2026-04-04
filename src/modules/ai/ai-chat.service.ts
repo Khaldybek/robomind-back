@@ -10,7 +10,10 @@ import { AiQuotaService } from './ai-quota.service';
 import { stripHtml } from './utils/strip-html';
 import { resolveStudentAiLanguage } from './utils/student-ai-language';
 
-export type ChatMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+export type ChatMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
 
 @Injectable()
 export class AiChatService {

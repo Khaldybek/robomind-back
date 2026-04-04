@@ -31,10 +31,7 @@ export class AppAiController {
 
   /** ИИ-ассистент по текущему модулю + история диалога */
   @Post('chat')
-  async chatModule(
-    @CurrentUser('id') userId: string,
-    @Body() dto: AiChatDto,
-  ) {
+  async chatModule(@CurrentUser('id') userId: string, @Body() dto: AiChatDto) {
     return this.aiChat.chatCourseModule(
       userId,
       dto.moduleId,

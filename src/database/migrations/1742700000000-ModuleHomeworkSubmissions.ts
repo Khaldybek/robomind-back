@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ModuleHomeworkSubmissions1742700000000
-  implements MigrationInterface
-{
+export class ModuleHomeworkSubmissions1742700000000 implements MigrationInterface {
   name = 'ModuleHomeworkSubmissions1742700000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -41,6 +39,8 @@ export class ModuleHomeworkSubmissions1742700000000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS "module_homework_submissions"`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "module_homework_submissions"`,
+    );
   }
 }

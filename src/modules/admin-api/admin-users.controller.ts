@@ -56,10 +56,7 @@ export class AdminUsersController {
   ): Promise<void> {
     const csv = await this.users.exportStudentsCsv(user);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="students.csv"',
-    );
+    res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
     res.send(csv);
   }
 

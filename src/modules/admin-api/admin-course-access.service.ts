@@ -37,7 +37,9 @@ export class AdminCourseAccessService {
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       if (!course.isPublished) {
         throw new NotFoundException('Курс не найден');
@@ -55,8 +57,7 @@ export class AdminCourseAccessService {
         throw new ForbiddenException('Ученик не относится к вашей школе');
       }
     }
-    const grantedBy =
-      actor.role === UserRole.SCHOOL_ADMIN ? actor.id : null;
+    const grantedBy = actor.role === UserRole.SCHOOL_ADMIN ? actor.id : null;
     const existing = await this.accesses.findOne({
       where: { courseId, userId: dto.userId },
     });
@@ -101,7 +102,9 @@ export class AdminCourseAccessService {
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       if (!course.isPublished) {
         throw new NotFoundException('Курс не найден');
@@ -109,8 +112,9 @@ export class AdminCourseAccessService {
     }
 
     const userIds = [...new Set(dto.userIds)];
-    const granted: Awaited<ReturnType<AdminCourseAccessService['grantAccess']>>[] =
-      [];
+    const granted: Awaited<
+      ReturnType<AdminCourseAccessService['grantAccess']>
+    >[] = [];
     const errors: { userId: string; code: 'already_active' | 'not_found' }[] =
       [];
     for (const userId of userIds) {
@@ -174,7 +178,9 @@ export class AdminCourseAccessService {
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       if (!course.isPublished) {
         throw new NotFoundException('Курс не найден');
@@ -205,15 +211,15 @@ export class AdminCourseAccessService {
     };
   }
 
-  async revokeAccess(
-    courseId: string,
-    userId: string,
-    actor: AuthUserPayload,
-  ) {
+  async revokeAccess(courseId: string, userId: string, actor: AuthUserPayload) {
     const u = await this.users.findOne({ where: { id: userId } });
     if (!u) throw new NotFoundException('Пользователь не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
-      if (!actor.schoolId || u.schoolId !== actor.schoolId || u.role !== UserRole.STUDENT) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
         throw new ForbiddenException('Нет доступа к этому пользователю');
       }
     }
@@ -230,7 +236,9 @@ export class AdminCourseAccessService {
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
       if (!actor.schoolId) {
-        throw new ForbiddenException('У администратора школы не задан schoolId');
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
       }
       if (!course.isPublished) {
         throw new NotFoundException('Курс не найден');

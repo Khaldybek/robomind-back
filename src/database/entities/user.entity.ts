@@ -51,7 +51,10 @@ export class User {
   @Column({ name: 'school_id', type: 'uuid', nullable: true })
   schoolId: string | null;
 
-  @ManyToOne(() => School, (s) => s.users, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => School, (s) => s.users, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'school_id' })
   school: School | null;
 

@@ -242,7 +242,9 @@ export class AdminGeoService {
   }
 
   async createSchool(dto: CreateSchoolDto) {
-    const dist = await this.districts.findOne({ where: { id: dto.districtId } });
+    const dist = await this.districts.findOne({
+      where: { id: dto.districtId },
+    });
     if (!dist) throw new BadRequestException('Район не найден');
     const s = this.schools.create({
       districtId: dto.districtId,

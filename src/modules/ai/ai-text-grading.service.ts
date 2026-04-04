@@ -79,7 +79,8 @@ ${params.studentAnswer}
     });
 
     const raw =
-      completion.choices[0]?.message?.content?.trim() ?? '{"score":0,"feedback":""}';
+      completion.choices[0]?.message?.content?.trim() ??
+      '{"score":0,"feedback":""}';
     const json = raw.replace(/^```json\s*|\s*```$/g, '').trim();
     let result: TextGradeResult;
     try {
@@ -93,7 +94,10 @@ ${params.studentAnswer}
             : 'Не удалось разобрать ответ модели.',
       };
     }
-    result.score = Math.max(0, Math.min(100, Math.round(Number(result.score) || 0)));
+    result.score = Math.max(
+      0,
+      Math.min(100, Math.round(Number(result.score) || 0)),
+    );
 
     await this.quota.increment(userId, AiFeature.TEXT_GRADE);
     return result;

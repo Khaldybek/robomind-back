@@ -19,14 +19,14 @@ export async function createApp(): Promise<INestApplication> {
       ? null
       : corsOriginRaw.split(',').map((o) => o.trim());
 
-  app.getHttpAdapter().getInstance().use(
-    '/api/v1/files',
-    (req: Request, res: Response, next: NextFunction) => {
-      const origin = req.headers.origin as string | undefined;
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .use('/api/v1/files', (req: Request, res: Response, next: NextFunction) => {
+      const origin = req.headers.origin;
 
       if (origin) {
-        const allowed =
-          !allowedOrigins || allowedOrigins.includes(origin);
+        const allowed = !allowedOrigins || allowedOrigins.includes(origin);
         if (allowed) {
           res.setHeader('Access-Control-Allow-Origin', origin);
           res.setHeader('Vary', 'Origin');
@@ -50,24 +50,26 @@ export async function createApp(): Promise<INestApplication> {
         return;
       }
       next();
-    },
-  );
+    });
 
-  app.getHttpAdapter().getInstance().use(
-    '/api/v1/files',
-    express.static(join(process.cwd(), uploadDir), {
-      maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
-      fallthrough: false,
-      setHeaders(res, filePath) {
-        res.setHeader('Accept-Ranges', 'bytes');
-        if (filePath.endsWith('.m3u8')) {
-          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        } else if (filePath.endsWith('.ts')) {
-          res.setHeader('Content-Type', 'video/mp2t');
-        }
-      },
-    }),
-  );
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .use(
+      '/api/v1/files',
+      express.static(join(process.cwd(), uploadDir), {
+        maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+        fallthrough: false,
+        setHeaders(res, filePath) {
+          res.setHeader('Accept-Ranges', 'bytes');
+          if (filePath.endsWith('.m3u8')) {
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          } else if (filePath.endsWith('.ts')) {
+            res.setHeader('Content-Type', 'video/mp2t');
+          }
+        },
+      }),
+    );
 
   app.enableCors({
     origin: allowedOrigins ?? true,
