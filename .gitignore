@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Vercel CLI
 .vercel
+
+# Создаётся `npm run build` для outputDirectory=public (см. scripts/ensure-public-output.cjs)
+/public

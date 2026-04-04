@@ -17,13 +17,14 @@
 
 ## Сборка и маршруты
 
-- **`vercel.json`** — `version: 2`, **`rewrites`** на **`/api`**, без **`outputDirectory`**: это только API (Nest), не статический экспорт — иначе Vercel ищет в каталоге вывода `src/main.*` и падает.
-- **`api/index.ts`** — serverless handler: один раз поднимает Nest (`dist/bootstrap-app.js`) и отдаёт запросы в Express.
+- **`vercel.json`** — `version: 2`, **`outputDirectory": "public"`** — Vercel требует, чтобы этот каталог **появился после сборки**. Nest пишет только в **`dist/`**, поэтому в **`npm run build`** добавлен шаг **`scripts/ensure-public-output.cjs`** (создаёт `public/` и маркер-файл).
+- **`rewrites`** — всё на **`/api`** (serverless).
+- **`api/index.ts`** — handler: Nest из `dist/bootstrap-app.js`.
 
 ### Настройки проекта на vercel.com
 
 - **Framework Preset:** Other (или пусто). В `vercel.json` задано **`"framework": null`**, чтобы не включался авто-пресет Nest без нужных признаков.
-- **Output Directory:** не задавать и не **`public`** — оставить по умолчанию / пусто, иначе снова будет ошибка про entrypoint.
+- **Output Directory:** должен совпадать с **`vercel.json`** (`public`). Если в UI задано иное — выровняйте или оставьте пустым, чтобы читался только `vercel.json`.
 
 В **`src/main.ts`** оставлен прямой импорт **`@nestjs/core`** (и `void NestFactory`) — иначе сборка Vercel может выдать *«No entrypoint found which imports nestjs»*.
 
