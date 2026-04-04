@@ -27,6 +27,7 @@ import {
   UserBadge,
   ModuleHomeworkSubmission,
 } from './entities';
+import { getRawPostgresDataSourceOptions } from './postgres-connection';
 import { InitialSchema1742274000000 } from './migrations/1742274000000-InitialSchema';
 import { AiDailyUsageAndQuestionRubric1742280000000 } from './migrations/1742280000000-AiDailyUsageAndQuestionRubric';
 import { DeviceLimitAndAdminNotifications1742290000000 } from './migrations/1742290000000-DeviceLimitAndAdminNotifications';
@@ -41,12 +42,7 @@ config({ path: join(__dirname, '../../.env') });
 
 /** Только default export — иначе TypeORM CLI: "must contain only one export of DataSource" */
 export default new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST ?? 'localhost',
-  port: parseInt(process.env.DB_PORT ?? '5432', 10),
-  username: process.env.DB_USERNAME ?? 'robomind',
-  password: process.env.DB_PASSWORD ?? 'robomind',
-  database: process.env.DB_NAME ?? 'robomind',
+  ...getRawPostgresDataSourceOptions(),
   entities: [
     City,
     District,

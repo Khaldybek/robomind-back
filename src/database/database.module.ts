@@ -26,6 +26,7 @@ import {
   UserGamification,
   UserBadge,
 } from './entities';
+import { typeOrmPostgresOptionsFromConfig } from './postgres-connection';
 
 const entities = [
   City,
@@ -59,12 +60,7 @@ const entities = [
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres' as const,
-        host: config.get<string>('DB_HOST', 'localhost'),
-        port: parseInt(config.get<string>('DB_PORT') ?? '5432', 10),
-        username: config.get<string>('DB_USERNAME', 'robomind'),
-        password: config.get<string>('DB_PASSWORD', 'robomind'),
-        database: config.get<string>('DB_NAME', 'robomind'),
+        ...typeOrmPostgresOptionsFromConfig(config),
         entities,
         synchronize: config.get<string>('DB_SYNC') === 'true',
         logging: config.get<string>('TYPEORM_LOGGING') === 'true',

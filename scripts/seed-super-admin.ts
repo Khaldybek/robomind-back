@@ -12,6 +12,7 @@ import { config } from 'dotenv';
 import { join } from 'path';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
+import { getRawPostgresDataSourceOptions } from '../src/database/postgres-connection';
 
 config({ path: join(__dirname, '../.env') });
 
@@ -26,12 +27,7 @@ async function main() {
   }
 
   const ds = new DataSource({
-    type: 'postgres',
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'robomind',
-    password: process.env.DB_PASSWORD ?? 'robomind',
-    database: process.env.DB_NAME ?? 'robomind',
+    ...getRawPostgresDataSourceOptions(),
     synchronize: false,
   });
 

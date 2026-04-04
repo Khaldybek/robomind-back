@@ -2,7 +2,7 @@
  * Демо-курсы с модулями, контент-блоками и тестами (реалистичные тексты на русском).
  * Видео, файлы и картинки не вшиваются — в блоках указано, что подставить после загрузки в админке.
  *
- * .env: те же DB_* что и для приложения.
+ * .env: `DATABASE_URL` / `DB_URL` или те же `DB_*`, что и для приложения.
  *
  *   npm run seed:demo-courses
  *
@@ -16,6 +16,7 @@ import { config } from 'dotenv';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { getRawPostgresDataSourceOptions } from '../src/database/postgres-connection';
 
 config({ path: join(__dirname, '../.env') });
 
@@ -27,12 +28,7 @@ const DEMO_COURSE_TITLES = [
 
 async function main() {
   const ds = new DataSource({
-    type: 'postgres',
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'robomind',
-    password: process.env.DB_PASSWORD ?? 'robomind',
-    database: process.env.DB_NAME ?? 'robomind',
+    ...getRawPostgresDataSourceOptions(),
     synchronize: false,
   });
 
