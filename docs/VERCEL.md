@@ -17,8 +17,13 @@
 
 ## Сборка и маршруты
 
-- **`vercel.json`** — `version: 2`, `outputDirectory: public` (в репозитории есть пустой **`public/`** — требование Vercel), `rewrites` на **`/api`**.
+- **`vercel.json`** — `version: 2`, **`rewrites`** на **`/api`**, без **`outputDirectory`**: это только API (Nest), не статический экспорт — иначе Vercel ищет в каталоге вывода `src/main.*` и падает.
 - **`api/index.ts`** — serverless handler: один раз поднимает Nest (`dist/bootstrap-app.js`) и отдаёт запросы в Express.
+
+### Настройки проекта на vercel.com
+
+- **Framework Preset:** Other (или пусто).
+- **Output Directory:** не задавать и не **`public`** — оставить по умолчанию / пусто, иначе снова будет ошибка про entrypoint.
 
 Корень API: **`/api/v1`** (как локально). На проде URL будет вида `https://<project>.vercel.app/api/v1/...`.
 
