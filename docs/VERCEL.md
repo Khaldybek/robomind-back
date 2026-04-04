@@ -17,8 +17,8 @@
 
 ## Сборка и маршруты
 
-- **`vercel.json`** — `buildCommand: npm run build`, все пути переписываются на **`/api/server`** (serverless-функция).
-- **`api/server.ts`** — поднимает Nest один раз (кэш инстанса) и отдаёт запросы в Express-адаптер.
+- **`vercel.json`** — `version: 2`, `outputDirectory: public` (в репозитории есть пустой **`public/`** — требование Vercel), `rewrites` на **`/api`**.
+- **`api/index.ts`** — serverless handler: один раз поднимает Nest (`dist/bootstrap-app.js`) и отдаёт запросы в Express.
 
 Корень API: **`/api/v1`** (как локально). На проде URL будет вида `https://<project>.vercel.app/api/v1/...`.
 

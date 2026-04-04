@@ -1,6 +1,5 @@
 /**
- * Точка входа Vercel Serverless: все запросы проксируются в Nest (см. vercel.json rewrites).
- * Перед деплоем: `npm run build` — нужен `dist/bootstrap-app.js`.
+ * Точка входа Vercel Serverless. Перед деплоем: `npm run build` → нужен `dist/bootstrap-app.js`.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { INestApplication } from '@nestjs/common';
