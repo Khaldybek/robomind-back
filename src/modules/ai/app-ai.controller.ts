@@ -7,11 +7,11 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { validate as uuidValidate } from 'uuid';
+import { isUuidString } from '../../utils/is-uuid-string';
 import { AiChatService } from './ai-chat.service';
 import { AiRecommendationsService } from './ai-recommendations.service';
 import { AiTextGradingService } from './ai-text-grading.service';
-import { AiChatDto } from './dto/chat.dto';
+import { AiChatDto, AiCourseChatDto, AiProfileChatDto } from './dto/chat.dto';
 import { AiGradeTextDto } from './dto/grade-text.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -40,6 +40,29 @@ export class AppAiController {
     );
   }
 
+  /** Прямой чат в профиле (без moduleId) */
+  @Post('chat-profile')
+  async chatProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: AiProfileChatDto,
+  ) {
+    return this.aiChat.chatProfile(userId, dto.messages, dto.language);
+  }
+
+  /** Чат по всему курсу (контекст всех модулей курса). */
+  @Post('chat-course')
+  async chatCourse(
+    @CurrentUser('id') userId: string,
+    @Body() dto: AiCourseChatDto,
+  ) {
+    return this.aiChat.chatCourse(
+      userId,
+      dto.courseId,
+      dto.messages,
+      dto.language,
+    );
+  }
+
   /** Персональные рекомендации на дашборд */
   @Get('recommendations')
   async recommendationsRoute(
@@ -47,7 +70,7 @@ export class AppAiController {
     @Query('courseId') courseId?: string,
     @Query('language') language?: 'ru' | 'kk',
   ) {
-    if (courseId && !uuidValidate(courseId)) {
+    if (courseId && !isUuidString(courseId)) {
       throw new BadRequestException('courseId должен быть UUID');
     }
     if (language && language !== 'ru' && language !== 'kk') {

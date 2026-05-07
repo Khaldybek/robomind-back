@@ -36,3 +36,30 @@ export class AiChatDto {
   @Type(() => AiChatMessageDto)
   messages: AiChatMessageDto[];
 }
+
+/** Прямой чат в профиле (без привязки к модулю) */
+export class AiProfileChatDto {
+  @IsOptional()
+  @IsIn(['ru', 'kk'])
+  language?: 'ru' | 'kk';
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AiChatMessageDto)
+  messages: AiChatMessageDto[];
+}
+
+/** Чат по всему курсу (контекст всех опубликованных модулей курса) */
+export class AiCourseChatDto {
+  @IsUUID()
+  courseId: string;
+
+  @IsOptional()
+  @IsIn(['ru', 'kk'])
+  language?: 'ru' | 'kk';
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AiChatMessageDto)
+  messages: AiChatMessageDto[];
+}

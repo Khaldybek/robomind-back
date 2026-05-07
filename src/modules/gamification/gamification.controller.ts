@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   ParseIntPipe,
-  ParseUUIDPipe,
   Query,
   UseGuards,
   BadRequestException,
@@ -15,7 +14,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../database/enums';
-import { validate as uuidValidate } from 'uuid';
+import { isUuidString } from '../../utils/is-uuid-string';
 
 @Controller('app/gamification')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -38,7 +37,7 @@ export class GamificationController {
     @Query('schoolId') schoolId?: string,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
   ) {
-    if (schoolId && !uuidValidate(schoolId)) {
+    if (schoolId && !isUuidString(schoolId)) {
       throw new BadRequestException('schoolId должен быть UUID');
     }
     const safeLimit = Math.min(Math.max(limit ?? 20, 1), 100);
@@ -54,7 +53,7 @@ export class GamificationController {
     @CurrentUser('id') userId: string,
     @Query('schoolId') schoolId?: string,
   ) {
-    if (schoolId && !uuidValidate(schoolId)) {
+    if (schoolId && !isUuidString(schoolId)) {
       throw new BadRequestException('schoolId должен быть UUID');
     }
     return this.gam.getMyRank(userId, schoolId);

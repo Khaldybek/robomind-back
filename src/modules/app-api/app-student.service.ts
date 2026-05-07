@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Or, MoreThan, Repository } from 'typeorm';
+import { In, IsNull, Or, MoreThan, Repository } from 'typeorm';
 import { City } from '../../database/entities/city.entity';
 import { District } from '../../database/entities/district.entity';
 import { School } from '../../database/entities/school.entity';
@@ -25,6 +25,7 @@ import { PatchAppUserDto } from './dto/patch-app-user.dto';
 import { SubmitQuizAttemptDto } from './dto/submit-quiz-attempt.dto';
 import { PatchModuleProgressDto } from './dto/patch-module-progress.dto';
 import { GamificationService } from '../gamification/gamification.service';
+import { AdminUploadService } from '../admin-api/admin-upload.service';
 
 @Injectable()
 export class AppStudentService {
@@ -54,6 +55,7 @@ export class AppStudentService {
     @InjectRepository(Certificate)
     private readonly certificates: Repository<Certificate>,
     private readonly gamification: GamificationService,
+    private readonly upload: AdminUploadService,
   ) {}
 
   private accessWhere(userId: string) {
@@ -148,6 +150,106 @@ export class AppStudentService {
     };
   }
 
+  /** Расширенный профиль студента: базовые данные + курсы + сертификаты + успеваемость */
+  async getMeProfile(userId: string) {
+    const [me, courses, certificates, progressRows, attempts] = await Promise.all([
+      this.getMe(userId),
+      this.listCourses(userId),
+      this.listMyCertificates(userId),
+      this.userProgress.find({ where: { userId } }),
+      this.quizAttempts.find({ where: { userId } }),
+    ]);
+
+    const courseIds = courses.map((c) => c.id);
+    const publishedModules = courseIds.length
+      ? await this.modules.find({
+          where: { courseId: In(courseIds), isPublished: true },
+          select: { id: true, courseId: true },
+        })
+      : [];
+
+    const modulesByCourse = new Map<string, string[]>();
+    for (const m of publishedModules) {
+      const arr = modulesByCourse.get(m.courseId) ?? [];
+      arr.push(m.id);
+      modulesByCourse.set(m.courseId, arr);
+    }
+
+    const completedModuleIds = new Set(
+      progressRows
+        .filter((p) => p.status === ProgressStatus.COMPLETED)
+        .map((p) => p.moduleId),
+    );
+    const inProgressModuleIds = new Set(
+      progressRows
+        .filter((p) => p.status === ProgressStatus.IN_PROGRESS)
+        .map((p) => p.moduleId),
+    );
+
+    const courseProgress = courses.map((c) => {
+      const moduleIds = modulesByCourse.get(c.id) ?? [];
+      const totalModules = moduleIds.length;
+      const completedModules = moduleIds.filter((id) =>
+        completedModuleIds.has(id),
+      ).length;
+      const modulesInProgress = moduleIds.filter((id) =>
+        inProgressModuleIds.has(id),
+      ).length;
+      const progressPercent =
+        totalModules > 0
+          ? Math.round((completedModules / totalModules) * 1000) / 10
+          : 0;
+      return {
+        ...c,
+        totalModules,
+        completedModules,
+        modulesInProgress,
+        progressPercent,
+      };
+    });
+
+    const totalModules = publishedModules.length;
+    const modulesCompleted = publishedModules.filter((m) =>
+      completedModuleIds.has(m.id),
+    ).length;
+    const modulesInProgress = publishedModules.filter((m) =>
+      inProgressModuleIds.has(m.id),
+    ).length;
+    const overallProgressPercent =
+      totalModules > 0 ? Math.round((modulesCompleted / totalModules) * 1000) / 10 : 0;
+
+    const completedAttempts = attempts.filter(
+      (a) => a.completedAt && a.maxScore > 0,
+    );
+    const averageQuizPercent =
+      completedAttempts.length > 0
+        ? Math.round(
+            (completedAttempts.reduce(
+              (sum, a) => sum + (a.score / a.maxScore) * 100,
+              0,
+            ) /
+              completedAttempts.length) *
+              10,
+          ) / 10
+        : null;
+
+    return {
+      ...me,
+      certificates,
+      courses: courseProgress,
+      performance: {
+        coursesCount: courses.length,
+        certificatesCount: certificates.length,
+        totalModules,
+        modulesCompleted,
+        modulesInProgress,
+        overallProgressPercent,
+        totalQuizAttempts: attempts.length,
+        averageQuizPercent,
+      },
+    };
+  }
+
   async patchMe(userId: string, dto: PatchAppUserDto) {
     const u = await this.users.findOne({ where: { id: userId } });
     if (!u) throw new NotFoundException('Пользователь не найден');
@@ -159,6 +261,16 @@ export class AppStudentService {
       const v = dto.avatarUrl?.trim();
       u.avatarUrl = v || null;
     }
+    await this.users.save(u);
+    return this.getMe(userId);
+  }
+
+  /** Загрузка нового аватара файлом (multipart: field `file`) */
+  async uploadMyAvatar(userId: string, file: Express.Multer.File | undefined) {
+    const u = await this.users.findOne({ where: { id: userId } });
+    if (!u) throw new NotFoundException('Пользователь не найден');
+    const meta = this.upload.image(file);
+    u.avatarUrl = meta.url;
     await this.users.save(u);
     return this.getMe(userId);
   }

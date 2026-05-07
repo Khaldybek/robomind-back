@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ModuleContent } from '../../database/entities/module-content.entity';
+import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
 import { QuizAttempt } from '../../database/entities/quiz-attempt.entity';
 import { UserProgress } from '../../database/entities/user-progress.entity';
 import { AiDailyUsage } from '../../database/entities/ai-daily-usage.entity';
@@ -22,6 +23,7 @@ import { AuthModule } from '../auth/auth.module';
     TypeOrmModule.forFeature([
       AiDailyUsage,
       ModuleContent,
+      CourseModuleEntity,
       QuizAttempt,
       UserProgress,
     ]),

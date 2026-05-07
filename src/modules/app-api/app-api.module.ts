@@ -21,6 +21,7 @@ import { AppCoursesController } from './app-courses.controller';
 import { AppModulesController } from './app-modules.controller';
 import { AppQuizController } from './app-quiz.controller';
 import { AppStudentService } from './app-student.service';
+import { AdminUploadService } from '../admin-api/admin-upload.service';
 
 @Module({
   imports: [
@@ -49,6 +50,6 @@ import { AppStudentService } from './app-student.service';
     AppModulesController,
     AppQuizController,
   ],
-  providers: [AppStudentService],
+  providers: [AppStudentService, AdminUploadService],
 })
 export class AppApiModule {}
