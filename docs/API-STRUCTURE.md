@@ -45,7 +45,9 @@
 | Метод | Путь | Описание |
 |--------|------|----------|
 | GET | `/app/users/me` | Текущий пользователь + школа |
+| GET | `/app/users/me/profile` | Расширенный профиль: фото, курсы, сертификаты, успеваемость |
 | PATCH | `/app/users/me` | Обновление профиля (`PatchAppUserDto`) |
+| POST | `/app/users/me/avatar` | Загрузка фото профиля (`multipart` поле `file`) |
 | GET | `/app/users/me/progress` | Прогресс по модулям |
 | GET | `/app/users/me/dashboard` | Сводка (курсы, счётчики прогресса и сертификатов) |
 | GET | `/app/users/me/certificates` | Сертификаты пользователя |
@@ -86,6 +88,8 @@
 | Метод | Путь | Описание |
 |--------|------|----------|
 | POST | `/app/ai/chat` | Диалог по модулю |
+| POST | `/app/ai/chat-profile` | Прямой чат ИИ в профиле (без moduleId) |
+| POST | `/app/ai/chat-course` | Чат ИИ по всему курсу (`courseId`) |
 | GET | `/app/ai/recommendations` | Рекомендации (`?courseId` опционально) |
 | POST | `/app/ai/grade-text` | Оценка свободного ответа |
 

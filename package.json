@@ -27,7 +27,12 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "seed:super-admin": "ts-node -r tsconfig-paths/register scripts/seed-super-admin.ts",
-    "seed:demo-courses": "ts-node -r tsconfig-paths/register scripts/seed-demo-courses.ts"
+    "seed:demo-courses": "ts-node -r tsconfig-paths/register scripts/seed-demo-courses.ts",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop robomind-back",
+    "pm2:reload": "pm2 reload ecosystem.config.cjs",
+    "pm2:delete": "pm2 delete robomind-back",
+    "pm2:logs": "pm2 logs robomind-back"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -71,6 +76,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
+    "pm2": "^6.0.8",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",

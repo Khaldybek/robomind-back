@@ -33,7 +33,9 @@
 | GET | `/app/cities/:cityId/districts` | — | районы |
 | GET | `/app/districts/:districtId/schools` | — | школы |
 | GET | `/app/users/me` | — (Bearer) | профиль + школа |
+| GET | `/app/users/me/profile` | — (Bearer) | расширенный профиль: фото, курсы, сертификаты, успеваемость |
 | PATCH | `/app/users/me` | опц. имя, отчество, `avatarUrl` | обновлённый профиль |
+| POST | `/app/users/me/avatar` | `multipart/form-data`: `file` | загрузка фото профиля (автоматически ставит `avatarUrl`) |
 | GET | `/app/users/me/dashboard` | — | сводка + курсы |
 | GET | `/app/users/me/progress` | — | массив прогресса по модулям |
 | GET | `/app/users/me/certificates` | — | сертификаты |
@@ -47,6 +49,8 @@
 | POST | `/app/quizzes/:quizId/attempt` | — | `attemptId`, `startedAt`, `maxScore`, `resumed` |
 | POST | `/app/attempts/:attemptId/submit` | `answers`: объект `questionId` → ответ | баллы, `isPassed`, при успехе прогресс модуля |
 | POST | `/app/ai/chat` | `moduleId`, `messages[]`, опц. `language` `ru`\|`kk` | ответ ассистента |
+| POST | `/app/ai/chat-profile` | `messages[]`, опц. `language` `ru`\|`kk` | прямой чат ИИ в профиле (без moduleId) |
+| POST | `/app/ai/chat-course` | `courseId`, `messages[]`, опц. `language` `ru`\|`kk` | чат ИИ по всему курсу |
 | GET | `/app/ai/recommendations` | query `courseId?`, опц. `language` `ru`\|`kk` | рекомендации |
 | POST | `/app/ai/grade-text` | вопрос, ответы, эталон, опц. `language` | оценка + фидбек |
 | GET | `/app/gamification/me` | — | XP, уровень, стрик, бейджи, прогресс уровня, подсказки по бейджам |
@@ -229,11 +233,63 @@
 
 ---
 
+### `GET /app/users/me/profile`
+
+**Заголовок:** `Authorization: Bearer <accessToken>`
+
+Расширенный профиль в одном запросе:
+
+- базовые поля пользователя (как в `GET /app/users/me`, включая `avatarUrl`);
+- `certificates`: массив сертификатов (как `GET /app/users/me/certificates`);
+- `courses`: доступные курсы + прогресс по каждому (`totalModules`, `completedModules`, `modulesInProgress`, `progressPercent`);
+- `performance`: агрегированная успеваемость (`overallProgressPercent`, `averageQuizPercent`, и др.).
+
+**Ответ `200` (сокращённо):**
+
+```json
+{
+  "id": "uuid",
+  "avatarUrl": "https://...",
+  "certificates": [],
+  "courses": [
+    {
+      "id": "uuid",
+      "title": "Робототехника",
+      "thumbnailUrl": "/api/v1/files/images/...",
+      "progressPercent": 40
+    }
+  ],
+  "performance": {
+    "coursesCount": 2,
+    "certificatesCount": 1,
+    "totalModules": 10,
+    "modulesCompleted": 4,
+    "modulesInProgress": 2,
+    "overallProgressPercent": 40,
+    "totalQuizAttempts": 7,
+    "averageQuizPercent": 78.6
+  }
+}
+```
+
+---
+
 ### `PATCH /app/users/me`
 
 **Тело:** только изменяемые поля (все опционально): `firstName`, `lastName`, `patronymic`, `avatarUrl` (строка URL или пустая строка для сброса).
 
 **Ответ `200`:** тот же формат, что у `GET /app/users/me`.
+
+---
+
+### `POST /app/users/me/avatar`
+
+**Заголовок:** `Authorization: Bearer <accessToken>`  
+**Тело:** `multipart/form-data`, поле **`file`** (изображение).
+
+Сервер сам сохраняет файл и обновляет `avatarUrl` у текущего ученика.
+
+**Ответ `200`:** тот же формат, что у `GET /app/users/me` (с новым `avatarUrl`).
 
 ---
 
@@ -497,6 +553,60 @@
 ```
 
 `language` опционально (`ru` | `kk`).
+
+**Ответ `200`:**
+
+```json
+{ "reply": "Текст ответа ассистента" }
+```
+
+**Ошибки:** `401`, `403` (не student), `429` дневной лимит, `503` нет OpenAI.
+
+---
+
+### `POST /app/ai/chat-profile`
+
+Прямой чат в профиле ученика, без привязки к модулю.
+
+**Тело:**
+
+```json
+{
+  "language": "kk",
+  "messages": [
+    { "role": "user", "content": "Как лучше подготовиться к контрольной?" },
+    { "role": "assistant", "content": "..." }
+  ]
+}
+```
+
+`language` опционально (`ru` | `kk`), по умолчанию — из env `AI_STUDENT_REPLY_LANGUAGE`.
+
+**Ответ `200`:**
+
+```json
+{ "reply": "Текст ответа ассистента" }
+```
+
+**Ошибки:** `401`, `403` (не student), `429` дневной лимит, `503` нет OpenAI.
+
+---
+
+### `POST /app/ai/chat-course`
+
+Чат по курсу (контекст всех опубликованных модулей курса).
+
+**Тело:**
+
+```json
+{
+  "courseId": "uuid",
+  "language": "kk",
+  "messages": [
+    { "role": "user", "content": "По этому курсу что важно повторить?" }
+  ]
+}
+```
 
 **Ответ `200`:**
 
