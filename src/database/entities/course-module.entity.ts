@@ -5,24 +5,21 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Course } from './course.entity';
-import { ModuleContent } from './module-content.entity';
-import { Quiz } from './quiz.entity';
-import { UserProgress } from './user-progress.entity';
+import { Lesson } from './lesson.entity';
 
-@Entity('modules')
-export class Module {
+@Entity('course_modules')
+export class CourseModule {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ name: 'course_id', type: 'uuid' })
   courseId: string;
 
-  @ManyToOne(() => Course, (c) => c.modules, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Course, (c) => c.courseModules, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
@@ -38,21 +35,15 @@ export class Module {
   @Column({ name: 'is_published', type: 'boolean', default: false })
   isPublished: boolean;
 
-  @Column({ name: 'unlock_after_module_id', type: 'uuid', nullable: true })
-  unlockAfterModuleId: string | null;
+  @Column({ name: 'unlock_after_course_module_id', type: 'uuid', nullable: true })
+  unlockAfterCourseModuleId: string | null;
 
-  @ManyToOne(() => Module, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'unlock_after_module_id' })
-  unlockAfterModule: Module | null;
+  @ManyToOne(() => CourseModule, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'unlock_after_course_module_id' })
+  unlockAfterCourseModule: CourseModule | null;
 
-  @OneToMany(() => ModuleContent, (c) => c.module)
-  contents: ModuleContent[];
-
-  @OneToOne(() => Quiz, (q) => q.module)
-  quiz: Quiz;
-
-  @OneToMany(() => UserProgress, (p) => p.module)
-  userProgress: UserProgress[];
+  @OneToMany(() => Lesson, (l) => l.courseModule)
+  lessons: Lesson[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

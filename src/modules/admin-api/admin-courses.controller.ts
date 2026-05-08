@@ -26,14 +26,17 @@ import {
   type AuthUserPayload,
 } from '../auth/decorators/current-user.decorator';
 import { AdminCoursesService } from './admin-courses.service';
-import { AdminModulesService } from './admin-modules.service';
+import { AdminCourseModulesService } from './admin-course-modules.service';
 import { AdminCourseAccessService } from './admin-course-access.service';
 import {
   CreateAdminCourseDto,
   ListAdminCoursesQueryDto,
   PatchAdminCourseDto,
 } from './dto/admin-courses.dto';
-import { ListModulesByCourseQueryDto } from './dto/admin-modules.dto';
+import {
+  CreateCourseModuleDto,
+  ListModulesByCourseQueryDto,
+} from './dto/admin-modules.dto';
 import {
   GrantCourseAccessDto,
   ListCourseAccessesQueryDto,
@@ -50,7 +53,7 @@ const maxCourseThumbnailBytes =
 export class AdminCoursesController {
   constructor(
     private readonly courses: AdminCoursesService,
-    private readonly modules: AdminModulesService,
+    private readonly courseModules: AdminCourseModulesService,
     private readonly courseAccess: AdminCourseAccessService,
     private readonly upload: AdminUploadService,
   ) {}
@@ -107,15 +110,30 @@ export class AdminCoursesController {
       sort: q.sort,
     };
     if (user.role === UserRole.SCHOOL_ADMIN) {
-      return this.modules.listModules(
+      return this.courseModules.listByCourse(
         { ...base, isPublished: true },
         { schoolAdminReadOnly: true },
       );
     }
-    return this.modules.listModules({
+    return this.courseModules.listByCourse({
       ...base,
       isPublished: q.isPublished,
     });
+  }
+
+  @Post(':courseId/modules')
+  @HttpCode(HttpStatus.CREATED)
+  createCourseModule(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Body() dto: CreateCourseModuleDto,
+  ) {
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException(
+        'Только супер-администратор может создавать модули курса',
+      );
+    }
+    return this.courseModules.create(courseId, dto);
   }
 
   @Get(':courseId/accesses')

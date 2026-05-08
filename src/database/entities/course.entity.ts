@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { CourseLevel } from '../enums';
 import { User } from './user.entity';
-import { Module } from './module.entity';
+import { CourseModule } from './course-module.entity';
 import { CourseAccess } from './course-access.entity';
 import { UserProgress } from './user-progress.entity';
 import { Certificate } from './certificate.entity';
@@ -57,8 +57,8 @@ export class Course {
   @JoinColumn({ name: 'created_by' })
   createdByUser: User | null;
 
-  @OneToMany(() => Module, (m) => m.course)
-  modules: Module[];
+  @OneToMany(() => CourseModule, (cm) => cm.course)
+  courseModules: CourseModule[];
 
   @OneToMany(() => CourseAccess, (a) => a.course)
   courseAccesses: CourseAccess[];

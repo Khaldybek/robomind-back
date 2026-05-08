@@ -11,7 +11,7 @@ import {
 
 export class ListHomeworkSubmissionsQueryDto {
   @IsUUID()
-  moduleId: string;
+  lessonId: string;
 
   @IsOptional()
   @IsUUID()

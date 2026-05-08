@@ -151,7 +151,7 @@ export type BadgeProgressHint = {
 // ─── Events ──────────────────────────────────────────────────────────────────
 export interface GamificationEvent {
   type:
-    | 'module_completed'
+    | 'lesson_completed'
     | 'quiz_passed'
     | 'course_completed'
     | 'homework_submitted'
@@ -259,7 +259,7 @@ export class GamificationService {
     const { newBadges: streakBadges } = await this.updateStreak(userId);
     newBadges.push(...streakBadges);
 
-    if (event.type === 'module_completed') {
+    if (event.type === 'lesson_completed') {
       xpGained += XP.MODULE_COMPLETED;
       await this.addXp(userId, XP.MODULE_COMPLETED);
       newBadges.push(...(await this.checkModuleBadges(userId)));
@@ -381,11 +381,11 @@ export class GamificationService {
   ): Promise<BadgeKey[]> {
     const badges: BadgeKey[] = [];
     // Считаем по userId из репозитория напрямую через raw запрос
-    // (ModuleHomeworkSubmission не инжектирован в этом сервисе,
+    // (LessonHomeworkSubmission не инжектирован в этом сервисе,
     //  поэтому используем поле progressRepo как прокси нет — делаем через
     //  gamRepo raw query)
     const [{ count }] = await this.gamRepo.query(
-      `SELECT COUNT(*) AS count FROM module_homework_submissions WHERE user_id = $1`,
+      `SELECT COUNT(*) AS count FROM lesson_homework_submissions WHERE user_id = $1`,
       [userId],
     );
     const total = parseInt(count, 10);
@@ -501,7 +501,7 @@ export class GamificationService {
 
     // Домашки
     const [{ count: hwCountStr }] = await this.gamRepo.query(
-      `SELECT COUNT(*) AS count FROM module_homework_submissions WHERE user_id = $1`,
+      `SELECT COUNT(*) AS count FROM lesson_homework_submissions WHERE user_id = $1`,
       [userId],
     );
     const hwTotal = parseInt(hwCountStr, 10);

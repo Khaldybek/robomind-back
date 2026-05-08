@@ -47,12 +47,12 @@ export class AdminHomeworkController {
    * Журнал: ученики школы с доступом к курсу + баллы теста и домашки.
    * school_admin — школа из JWT; super_admin — обязателен query `schoolId`.
    */
-  @Get('modules/:moduleId/grade-overview')
+  @Get('lessons/:lessonId/grade-overview')
   gradeOverview(
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Query('schoolId') schoolId: string | undefined,
     @CurrentUser() user: AuthUserPayload,
   ) {
-    return this.homework.getModuleGradeOverview(moduleId, user, schoolId);
+    return this.homework.getLessonGradeOverview(lessonId, user, schoolId);
   }
 }

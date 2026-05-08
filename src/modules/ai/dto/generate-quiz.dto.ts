@@ -12,13 +12,13 @@ import {
 export class AiGenerateQuizDto {
   @IsOptional()
   @IsUUID()
-  moduleId?: string;
+  lessonId?: string;
 
-  /** Если нет moduleId — сырой текст урока */
+  /** Если нет lessonId — сырой текст урока */
   @IsOptional()
   @IsString()
   @MinLength(80)
-  moduleText?: string;
+  lessonText?: string;
 
   @IsInt()
   @Min(1)

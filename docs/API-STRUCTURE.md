@@ -48,21 +48,22 @@
 | GET | `/app/users/me/profile` | Расширенный профиль: фото, курсы, сертификаты, успеваемость |
 | PATCH | `/app/users/me` | Обновление профиля (`PatchAppUserDto`) |
 | POST | `/app/users/me/avatar` | Загрузка фото профиля (`multipart` поле `file`) |
-| GET | `/app/users/me/progress` | Прогресс по модулям |
+| GET | `/app/users/me/progress` | Прогресс по урокам |
 | GET | `/app/users/me/dashboard` | Сводка (курсы, счётчики прогресса и сертификатов) |
 | GET | `/app/users/me/certificates` | Сертификаты пользователя |
 
-### Курсы и модули
+### Курсы, секции и уроки
 
 | Метод | Путь | Описание |
 |--------|------|----------|
 | GET | `/app/courses` | Курсы с действующим доступом |
-| GET | `/app/courses/:courseId/modules` | Курс (id, title, thumbnailUrl) + модули |
-| GET | `/app/modules/:moduleId/content` | Контент модуля |
-| GET | `/app/modules/:moduleId/quiz` | Тест (без `isCorrect` у ответов) |
-| PATCH | `/app/modules/:moduleId/progress` | Обновление прогресса (`PatchModuleProgressDto`) |
-| POST | `/app/modules/:moduleId/homework` | Сдача ДЗ: `multipart` поле `file`, опц. `comment` |
-| GET | `/app/modules/:moduleId/homework` | Текущая сдача и оценка (`submission` или `null`) |
+| GET | `/app/courses/:courseId/modules` | Курс + **секции** (`modules[]` — модули курса, не уроки) |
+| GET | `/app/course-modules/:courseModuleId/lessons` | Уроки в секции |
+| GET | `/app/lessons/:lessonId/content` | Контент урока |
+| GET | `/app/lessons/:lessonId/quiz` | Тест (без `isCorrect` у ответов) |
+| PATCH | `/app/lessons/:lessonId/progress` | Обновление прогресса (`PatchModuleProgressDto`) |
+| POST | `/app/lessons/:lessonId/homework` | Сдача ДЗ: `multipart` поле `file`, опц. `comment` |
+| GET | `/app/lessons/:lessonId/homework` | Текущая сдача и оценка (`submission` или `null`) |
 
 ### Геймификация
 
@@ -87,8 +88,8 @@
 
 | Метод | Путь | Описание |
 |--------|------|----------|
-| POST | `/app/ai/chat` | Диалог по модулю |
-| POST | `/app/ai/chat-profile` | Прямой чат ИИ в профиле (без moduleId) |
+| POST | `/app/ai/chat` | Диалог по уроку (`lessonId` + контекст из контента урока) |
+| POST | `/app/ai/chat-profile` | Прямой чат ИИ в профиле (без lessonId) |
 | POST | `/app/ai/chat-course` | Чат ИИ по всему курсу (`courseId`) |
 | GET | `/app/ai/recommendations` | Рекомендации (`?courseId` опционально) |
 | POST | `/app/ai/grade-text` | Оценка свободного ответа |
@@ -111,9 +112,9 @@
 | GET | `/admin/school/stats` | Сводка по школе (ученики, доступы, нарушения, непрочитанные уведомления) |
 | GET | `/admin/users/export` | CSV учеников школы |
 | POST | `/admin/users/import` | Массовое создание учеников из `.xlsx` (`school_admin`, поле `file`) |
-| GET | `/admin/homework-submissions` | Список сдач ДЗ по модулю (`moduleId`, для super_admin — `schoolId`) |
+| GET | `/admin/homework-submissions` | Список сдач ДЗ по уроку (`lessonId`, для super_admin — `schoolId`) |
 | PATCH | `/admin/homework-submissions/:submissionId` | Оценка ДЗ (`points`, опц. `maxPoints`, `feedback`) |
-| GET | `/admin/modules/:moduleId/grade-overview` | Журнал: тест + ДЗ по ученикам школы (`schoolId` для super_admin) |
+| GET | `/admin/lessons/:lessonId/grade-overview` | Журнал: тест + ДЗ по ученикам школы (`schoolId` для super_admin) |
 
 Дополнительно: **`GET /admin/me`**, **`GET .../quiz-attempts`**, **`POST .../access/bulk`**, **`PATCH /admin/notifications/read-all`** — см. **`docs/API-SCHOOL-ADMIN-BACKEND.md`**.
 
@@ -169,28 +170,32 @@
 | GET | `/admin/courses/:courseId` | Детали |
 | PATCH | `/admin/courses/:courseId` | Обновить (JSON или multipart + `thumbnail`) |
 | DELETE | `/admin/courses/:courseId` | Удалить |
-| GET | `/admin/courses/:courseId/modules` | Модули курса |
+| GET | `/admin/courses/:courseId/modules` | Секции курса (модули курса), пагинация |
+| POST | `/admin/courses/:courseId/modules` | Создать секцию (`super_admin`) |
 | GET | `/admin/courses/:courseId/accesses` | Доступы |
 | POST | `/admin/courses/:courseId/access` | Выдать доступ |
 | POST | `/admin/courses/:courseId/access/bulk` | Массовая выдача доступа |
 | DELETE | `/admin/courses/:courseId/access/:userId` | Отозвать |
 | GET | `/admin/courses/:courseId/students` | Ученики курса |
 
-### Модули и контент
+### Секции курса (отдельный CRUD) и уроки
 
-| Метод | Путь | Описание |
-|--------|------|----------|
-| GET | `/admin/modules` | Список модулей |
-| POST | `/admin/modules` | Создать модуль |
-| GET | `/admin/modules/:moduleId` | Модуль |
-| PATCH | `/admin/modules/:moduleId` | Обновить |
-| DELETE | `/admin/modules/:moduleId` | Удалить |
-| GET | `/admin/modules/:moduleId/contents` | Контент |
-| POST | `/admin/modules/:moduleId/contents` | Добавить контент |
-| POST | `/admin/modules/:moduleId/contents/from-file` | Контент из файла |
-| POST | `/admin/modules/:moduleId/content` | (алиас) |
-| PATCH | `/admin/modules/:moduleId/contents/:contentId` | Обновить блок |
-| DELETE | `/admin/modules/:moduleId/contents/:contentId` | Удалить блок |
+| Метод | Путь | Роль | Описание |
+|--------|------|------|----------|
+| GET | `/admin/course-modules/:courseModuleId` | `super_admin` | Одна секция |
+| PATCH | `/admin/course-modules/:courseModuleId` | `super_admin` | Обновить секцию |
+| DELETE | `/admin/course-modules/:courseModuleId` | `super_admin` | Удалить секцию |
+| GET | `/admin/lessons` | `super_admin` | Список уроков (query `courseModuleId`, пагинация) |
+| POST | `/admin/lessons` | `super_admin` | Создать урок в секции |
+| GET | `/admin/lessons/:lessonId` | `super_admin` | Урок |
+| PATCH | `/admin/lessons/:lessonId` | `super_admin` | Обновить урок |
+| DELETE | `/admin/lessons/:lessonId` | `super_admin` | Удалить урок |
+| GET | `/admin/lessons/:lessonId/contents` | `super_admin` | Контент урока |
+| POST | `/admin/lessons/:lessonId/contents` | `super_admin` | Добавить блок |
+| POST | `/admin/lessons/:lessonId/contents/from-file` | `super_admin` | Блок из файла |
+| POST | `/admin/lessons/:lessonId/content` | `super_admin` | (алиас POST contents) |
+| PATCH | `/admin/lessons/:lessonId/contents/:contentId` | `super_admin` | Обновить блок |
+| DELETE | `/admin/lessons/:lessonId/contents/:contentId` | `super_admin` | Удалить блок |
 
 ### Загрузки
 
@@ -214,9 +219,9 @@
 
 | Метод | Путь | Описание |
 |--------|------|----------|
-| GET | `/admin/modules/:moduleId/quiz` | Тест модуля |
-| POST | `/admin/modules/:moduleId/quiz/import-generated` | Импорт вопросов из ИИ |
-| POST | `/admin/modules/:moduleId/quiz` | Создать тест |
+| GET | `/admin/lessons/:lessonId/quiz` | Тест урока |
+| POST | `/admin/lessons/:lessonId/quiz/import-generated` | Импорт вопросов из ИИ |
+| POST | `/admin/lessons/:lessonId/quiz` | Создать тест |
 | POST | `/admin/quizzes/:quizId/questions` | Добавить вопрос |
 | PATCH | `/admin/quizzes/:quizId` | Обновить тест |
 | DELETE | `/admin/quizzes/:quizId` | Удалить тест |
@@ -230,8 +235,8 @@
 
 | Метод | Путь | Описание |
 |--------|------|----------|
-| POST | `/admin/ai/quiz/generate` | Генерация вопросов по тексту модуля |
-| POST | `/admin/ai/summarize` | Краткое содержание |
+| POST | `/admin/ai/quiz/generate` | Генерация вопросов: `lessonText` или `lessonId` (текст из контента) |
+| POST | `/admin/ai/summarize` | Краткое содержание: `text` или `lessonId` |
 | POST | `/admin/ai/transcribe` | Транскрибация файла (`multipart`) |
 
 ### Устройства и уведомления
@@ -258,7 +263,7 @@
 ## Коды ответов (кратко)
 
 - **401** — нет или невалидный JWT  
-- **403** — роль или доступ (курс/модуль/лимит устройств)  
+- **403** — роль или доступ (курс/урок/лимит устройств)  
 - **404** — сущность не найдена  
 - **409** — конфликт (дубликат, FK)  
 

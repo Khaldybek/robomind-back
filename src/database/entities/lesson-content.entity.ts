@@ -8,19 +8,19 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ModuleContentType } from '../enums';
-import { Module } from './module.entity';
+import { Lesson } from './lesson.entity';
 
-@Entity('module_contents')
-export class ModuleContent {
+@Entity('lesson_contents')
+export class LessonContent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'module_id', type: 'uuid' })
-  moduleId: string;
+  @Column({ name: 'lesson_id', type: 'uuid' })
+  lessonId: string;
 
-  @ManyToOne(() => Module, (m) => m.contents, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'module_id' })
-  module: Module;
+  @ManyToOne(() => Lesson, (l) => l.contents, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id' })
+  lesson: Lesson;
 
   @Column({
     type: 'enum',

@@ -29,18 +29,18 @@ export class AppAiController {
     private readonly textGrading: AiTextGradingService,
   ) {}
 
-  /** ИИ-ассистент по текущему модулю + история диалога */
+  /** ИИ-ассистент по текущему уроку + история диалога */
   @Post('chat')
-  async chatModule(@CurrentUser('id') userId: string, @Body() dto: AiChatDto) {
-    return this.aiChat.chatCourseModule(
+  async chatLesson(@CurrentUser('id') userId: string, @Body() dto: AiChatDto) {
+    return this.aiChat.chatLesson(
       userId,
-      dto.moduleId,
+      dto.lessonId,
       dto.messages,
       dto.language,
     );
   }
 
-  /** Прямой чат в профиле (без moduleId) */
+  /** Прямой чат в профиле (без lessonId) */
   @Post('chat-profile')
   async chatProfile(
     @CurrentUser('id') userId: string,
@@ -49,7 +49,7 @@ export class AppAiController {
     return this.aiChat.chatProfile(userId, dto.messages, dto.language);
   }
 
-  /** Чат по всему курсу (контекст всех модулей курса). */
+  /** Чат по всему курсу (контекст всех уроков курса). */
   @Post('chat-course')
   async chatCourse(
     @CurrentUser('id') userId: string,

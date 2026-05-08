@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Module } from './module.entity';
+import { Lesson } from './lesson.entity';
 import { Question } from './question.entity';
 import { QuizAttempt } from './quiz-attempt.entity';
 
@@ -17,12 +17,12 @@ export class Quiz {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'module_id', type: 'uuid', unique: true })
-  moduleId: string;
+  @Column({ name: 'lesson_id', type: 'uuid', unique: true })
+  lessonId: string;
 
-  @OneToOne(() => Module, (m) => m.quiz, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'module_id' })
-  module: Module;
+  @OneToOne(() => Lesson, (l) => l.quiz, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id' })
+  lesson: Lesson;
 
   @Column({ type: 'varchar', length: 512 })
   title: string;

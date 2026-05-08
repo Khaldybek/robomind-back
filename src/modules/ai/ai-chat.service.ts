@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ModuleContent } from '../../database/entities/module-content.entity';
-import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
+import { LessonContent } from '../../database/entities/lesson-content.entity';
+import { CourseModule } from '../../database/entities/course-module.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
 import { ModuleContentType } from '../../database/enums';
 import { AiFeature } from '../../database/enums';
 import { OpenAiService } from './openai.service';
@@ -22,15 +23,17 @@ export class AiChatService {
     private readonly openAi: OpenAiService,
     private readonly quota: AiQuotaService,
     private readonly config: ConfigService,
-    @InjectRepository(ModuleContent)
-    private readonly contentRepo: Repository<ModuleContent>,
-    @InjectRepository(CourseModuleEntity)
-    private readonly modulesRepo: Repository<CourseModuleEntity>,
+    @InjectRepository(LessonContent)
+    private readonly contentRepo: Repository<LessonContent>,
+    @InjectRepository(CourseModule)
+    private readonly courseModulesRepo: Repository<CourseModule>,
+    @InjectRepository(Lesson)
+    private readonly lessonsRepo: Repository<Lesson>,
   ) {}
 
-  async chatCourseModule(
+  async chatLesson(
     userId: string,
-    moduleId: string,
+    lessonId: string,
     messages: ChatMessage[],
     language?: 'ru' | 'kk',
   ): Promise<{ reply: string }> {
@@ -40,29 +43,29 @@ export class AiChatService {
     );
     await this.quota.assertUnderLimit(userId, AiFeature.CHAT, limit);
 
-    const context = await this.buildModuleContext(moduleId);
+    const context = await this.buildLessonContext(lessonId);
     const lang = resolveStudentAiLanguage(language, this.config);
     const system: ChatMessage =
       lang === 'kk'
         ? {
             role: 'system',
             content:
-              'Сен робототехника курсы бойынша ИИ-көмекшісің. Тек төмендегі модуль материалына сәйкес жауап бер. ' +
+              'Сен робототехника курсы бойынша ИИ-көмекшісің. Тек төмендегі сабақ материалына сәйкес жауап бер. ' +
               'Сұрақ сабаққа қатысты емес болса, сыпайы түрде «бұл сабақ тақырыбына жатпайды» деп айт.\n' +
               'Оқушылар — 4–7 сынып балалары. Мынаны сақта:\n' +
               '- Барлық жауапты қазақ тілінде жаз (техникалық терминді бір рет қарапайым сөзбен түсіндіруге болады).\n' +
               '- Қысқа сөйлемдер, қарапайым сөздер, достық тон.\n' +
               '- Қазақша сұраққа қазақша, орысша сұраққа да негізінен қазақша жауап бер (4–7 сынып үшін).\n\n' +
-              '--- Модуль материалы ---\n' +
+              '--- Сабақ материалы ---\n' +
               context,
           }
         : {
             role: 'system',
             content:
-              'Ты ИИ-ассистент по курсу робототехники. Отвечай только в рамках материала модуля ниже. ' +
+              'Ты ИИ-ассистент по курсу робототехники. Отвечай только в рамках материала урока ниже. ' +
               'Если вопрос вне темы — вежливо скажи, что это не относится к уроку. ' +
               'Объясняй простым языком для учеников 4–7 классов: короткие фразы, без перегруза терминами.\n\n' +
-              '--- Материал модуля ---\n' +
+              '--- Материал урока ---\n' +
               context,
           };
 
@@ -79,7 +82,7 @@ export class AiChatService {
     return { reply };
   }
 
-  /** Прямой чат в профиле ученика (без контекста конкретного модуля). */
+  /** Прямой чат в профиле ученика (без контекста конкретного урока). */
   async chatProfile(
     userId: string,
     messages: ChatMessage[],
@@ -124,7 +127,7 @@ export class AiChatService {
     return { reply };
   }
 
-  /** Чат по курсу: общий контекст всех опубликованных модулей курса. */
+  /** Чат по курсу: контекст всех опубликованных секций и уроков. */
   async chatCourse(
     userId: string,
     courseId: string,
@@ -173,71 +176,66 @@ export class AiChatService {
     return { reply };
   }
 
-  private async buildModuleContext(moduleId: string): Promise<string> {
+  private appendContentParts(c: LessonContent, parts: string[]) {
+    switch (c.type) {
+      case ModuleContentType.TEXT:
+        parts.push(c.content ? stripHtml(c.content) : '');
+        break;
+      case ModuleContentType.VIDEO:
+        parts.push(`[Видео: ${c.title ?? 'без названия'}]`);
+        break;
+      case ModuleContentType.FILE:
+      case ModuleContentType.IMAGE:
+        parts.push(`[Файл: ${c.title ?? c.fileUrl ?? ''}]`);
+        break;
+      case ModuleContentType.LIVESTREAM:
+        parts.push(`[Прямой эфир: ${c.livestreamUrl ?? ''}]`);
+        break;
+      case ModuleContentType.LINK:
+        parts.push(`[Ссылка: ${c.content ?? ''}]`);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private async buildLessonContext(lessonId: string): Promise<string> {
     const items = await this.contentRepo.find({
-      where: { moduleId },
+      where: { lessonId },
       order: { order: 'ASC' },
     });
     const parts: string[] = [];
     for (const c of items) {
-      switch (c.type) {
-        case ModuleContentType.TEXT:
-          parts.push(c.content ? stripHtml(c.content) : '');
-          break;
-        case ModuleContentType.VIDEO:
-          parts.push(`[Видео: ${c.title ?? 'без названия'}]`);
-          break;
-        case ModuleContentType.FILE:
-          parts.push(`[Файл: ${c.title ?? c.fileUrl ?? ''}]`);
-          break;
-        case ModuleContentType.LIVESTREAM:
-          parts.push(`[Прямой эфир: ${c.livestreamUrl ?? ''}]`);
-          break;
-        case ModuleContentType.LINK:
-          parts.push(`[Ссылка: ${c.content ?? ''}]`);
-          break;
-        default:
-          break;
-      }
+      this.appendContentParts(c, parts);
     }
     const text = parts.filter(Boolean).join('\n\n');
-    return text.slice(0, 24_000) || '(контент модуля пуст)';
+    return text.slice(0, 24_000) || '(контент урока пуст)';
   }
 
   private async buildCourseContext(courseId: string): Promise<string> {
-    const modules = await this.modulesRepo.find({
+    const sections = await this.courseModulesRepo.find({
       where: { courseId, isPublished: true },
       order: { order: 'ASC', id: 'ASC' },
       select: { id: true, title: true },
     });
-    if (!modules.length) return '(контент курса пуст)';
+    if (!sections.length) return '(контент курса пуст)';
 
     const parts: string[] = [];
-    for (const mod of modules) {
-      parts.push(`### Модуль: ${mod.title}`);
-      const items = await this.contentRepo.find({
-        where: { moduleId: mod.id },
+    for (const sec of sections) {
+      parts.push(`### Секция: ${sec.title}`);
+      const lessons = await this.lessonsRepo.find({
+        where: { courseModuleId: sec.id, isPublished: true },
         order: { order: 'ASC', id: 'ASC' },
+        select: { id: true, title: true },
       });
-      for (const c of items) {
-        switch (c.type) {
-          case ModuleContentType.TEXT:
-            parts.push(c.content ? stripHtml(c.content) : '');
-            break;
-          case ModuleContentType.VIDEO:
-            parts.push(`[Видео: ${c.title ?? 'без названия'}]`);
-            break;
-          case ModuleContentType.FILE:
-            parts.push(`[Файл: ${c.title ?? c.fileUrl ?? ''}]`);
-            break;
-          case ModuleContentType.LIVESTREAM:
-            parts.push(`[Прямой эфир: ${c.livestreamUrl ?? ''}]`);
-            break;
-          case ModuleContentType.LINK:
-            parts.push(`[Ссылка: ${c.content ?? ''}]`);
-            break;
-          default:
-            break;
+      for (const les of lessons) {
+        parts.push(`#### Урок: ${les.title}`);
+        const items = await this.contentRepo.find({
+          where: { lessonId: les.id },
+          order: { order: 'ASC', id: 'ASC' },
+        });
+        for (const c of items) {
+          this.appendContentParts(c, parts);
         }
       }
     }

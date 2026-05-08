@@ -12,22 +12,17 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../database/enums';
 
-@Controller('app/courses')
+@Controller('app/course-modules')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.STUDENT)
-export class AppCoursesController {
+export class AppCourseModulesController {
   constructor(private readonly app: AppStudentService) {}
 
-  @Get()
-  listCourses(@CurrentUser('id') userId: string) {
-    return this.app.listCourses(userId);
-  }
-
-  @Get(':courseId/modules')
-  listModules(
+  @Get(':courseModuleId/lessons')
+  listLessons(
     @CurrentUser('id') userId: string,
-    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Param('courseModuleId', ParseUUIDPipe) courseModuleId: string,
   ) {
-    return this.app.listCourseModules(userId, courseId);
+    return this.app.listLessonsInCourseModule(userId, courseModuleId);
   }
 }

@@ -7,7 +7,7 @@
 | Зачем | Пояснение |
 |--------|-----------|
 | **Один источник для фронта** | Разработчики панели студента смотрят один документ: не нужно собирать контракт из разных модулей кода (`app-api`, `auth`, `ai`). |
-| **Сквозной сценарий** | Регистрация → гео → логин → курсы → модуль → тест → прогресс → ИИ — идут по порядку в одном месте. |
+| **Сквозной сценарий** | Регистрация → гео → логин → курсы → секция курса → урок → тест → прогресс → ИИ — идут по порядку в одном месте. |
 | **Короткая навигация** | `API-STRUCTURE.md` — только **список путей**; этот файл — **тела запросов и формы ответов** для UI. |
 | **Версионирование** | Проще отслеживать изменения контракта студента в одном diff, чем по многим README. |
 
@@ -37,19 +37,20 @@
 | PATCH | `/app/users/me` | опц. имя, отчество, `avatarUrl` | обновлённый профиль |
 | POST | `/app/users/me/avatar` | `multipart/form-data`: `file` | загрузка фото профиля (автоматически ставит `avatarUrl`) |
 | GET | `/app/users/me/dashboard` | — | сводка + курсы |
-| GET | `/app/users/me/progress` | — | массив прогресса по модулям |
+| GET | `/app/users/me/progress` | — | массив прогресса по урокам |
 | GET | `/app/users/me/certificates` | — | сертификаты |
 | GET | `/app/courses` | — | курсы с доступом |
-| GET | `/app/courses/:courseId/modules` | — | `course` (id, title, thumbnailUrl) + `modules[]` |
-| GET | `/app/modules/:moduleId/content` | — | блоки контента |
-| GET | `/app/modules/:moduleId/quiz` | — | тест (вопросы с `answers`, без правильных) |
-| PATCH | `/app/modules/:moduleId/progress` | опц. `watchedSeconds`, `status`, `completed` | запись прогресса |
-| POST | `/app/modules/:moduleId/homework` | `multipart/form-data`: `file`, опц. `comment` | сдача ДЗ (повтор — замена файла, сброс оценки) |
-| GET | `/app/modules/:moduleId/homework` | — | текущая сдача и оценка или `{ submission: null }` |
+| GET | `/app/courses/:courseId/modules` | — | `course` (id, title, thumbnailUrl) + **`modules[]`** — **секции курса** (модули курса), не уроки |
+| GET | `/app/course-modules/:courseModuleId/lessons` | — | список **уроков** в секции (`lessons[]`, порядок, `unlockAfterLessonId`) |
+| GET | `/app/lessons/:lessonId/content` | — | блоки контента урока |
+| GET | `/app/lessons/:lessonId/quiz` | — | тест (вопросы с `answers`, без правильных) |
+| PATCH | `/app/lessons/:lessonId/progress` | опц. `watchedSeconds`, `status`, `completed` | запись прогресса по уроку |
+| POST | `/app/lessons/:lessonId/homework` | `multipart/form-data`: `file`, опц. `comment` | сдача ДЗ (повтор — замена файла, сброс оценки) |
+| GET | `/app/lessons/:lessonId/homework` | — | текущая сдача и оценка или `{ submission: null }` |
 | POST | `/app/quizzes/:quizId/attempt` | — | `attemptId`, `startedAt`, `maxScore`, `resumed` |
-| POST | `/app/attempts/:attemptId/submit` | `answers`: объект `questionId` → ответ | баллы, `isPassed`, при успехе прогресс модуля |
-| POST | `/app/ai/chat` | `moduleId`, `messages[]`, опц. `language` `ru`\|`kk` | ответ ассистента |
-| POST | `/app/ai/chat-profile` | `messages[]`, опц. `language` `ru`\|`kk` | прямой чат ИИ в профиле (без moduleId) |
+| POST | `/app/attempts/:attemptId/submit` | `answers`: объект `questionId` → ответ | баллы, `isPassed`, при успехе прогресс урока |
+| POST | `/app/ai/chat` | `lessonId`, `messages[]`, опц. `language` `ru`\|`kk` | ответ ассистента (контекст — материал урока) |
+| POST | `/app/ai/chat-profile` | `messages[]`, опц. `language` `ru`\|`kk` | прямой чат ИИ в профиле (без lessonId) |
 | POST | `/app/ai/chat-course` | `courseId`, `messages[]`, опц. `language` `ru`\|`kk` | чат ИИ по всему курсу |
 | GET | `/app/ai/recommendations` | query `courseId?`, опц. `language` `ru`\|`kk` | рекомендации |
 | POST | `/app/ai/grade-text` | вопрос, ответы, эталон, опц. `language` | оценка + фидбек |
@@ -241,7 +242,7 @@
 
 - базовые поля пользователя (как в `GET /app/users/me`, включая `avatarUrl`);
 - `certificates`: массив сертификатов (как `GET /app/users/me/certificates`);
-- `courses`: доступные курсы + прогресс по каждому (`totalModules`, `completedModules`, `modulesInProgress`, `progressPercent`);
+- `courses`: доступные курсы + прогресс по каждому (`totalLessons`, `completedLessons`, `lessonsInProgress`, `progressPercent`);
 - `performance`: агрегированная успеваемость (`overallProgressPercent`, `averageQuizPercent`, и др.).
 
 **Ответ `200` (сокращённо):**
@@ -256,15 +257,18 @@
       "id": "uuid",
       "title": "Робототехника",
       "thumbnailUrl": "/api/v1/files/images/...",
+      "totalLessons": 10,
+      "completedLessons": 4,
+      "lessonsInProgress": 2,
       "progressPercent": 40
     }
   ],
   "performance": {
     "coursesCount": 2,
     "certificatesCount": 1,
-    "totalModules": 10,
-    "modulesCompleted": 4,
-    "modulesInProgress": 2,
+    "totalLessons": 10,
+    "lessonsCompleted": 4,
+    "lessonsInProgress": 2,
     "overallProgressPercent": 40,
     "totalQuizAttempts": 7,
     "averageQuizPercent": 78.6
@@ -322,9 +326,9 @@
 **Ответ `200`:** объект с полями **`course`** и **`modules`**:
 
 - **`course`:** `id`, `title`, **`thumbnailUrl`** (обложка, может быть `null`; часто путь вида `/api/v1/files/images/...`).
-- **`modules`:** массив опубликованных модулей — для каждого: `id`, `title`, `description`, `order`, `unlockAfterModuleId`, `createdAt`, `updatedAt`.
+- **`modules`:** массив **опубликованных секций курса** (модулей курса) — для каждой: `id`, `title`, `description`, `order`, **`unlockAfterCourseModuleId`**, `createdAt`, `updatedAt`.
 
-Флаги «заблокирован / пройден» на фронте считают по `GET /app/users/me/progress` и `unlockAfterModuleId`.
+Список уроков внутри секции — отдельный запрос **`GET /app/course-modules/:courseModuleId/lessons`**. Разблокировка между секциями учитывает завершение всех уроков предыдущей секции; между уроками — поле **`unlockAfterLessonId`** в ответе списка уроков и прогресс в **`GET /app/users/me/progress`**.
 
 Пример:
 
@@ -341,7 +345,7 @@
       "title": "Введение",
       "description": null,
       "order": 0,
-      "unlockAfterModuleId": null,
+      "unlockAfterCourseModuleId": null,
       "createdAt": "2025-03-01T10:00:00.000Z",
       "updatedAt": "2025-03-15T14:30:00.000Z"
     }
@@ -351,9 +355,17 @@
 
 ---
 
-## 5. Контент модуля и тест
+### `GET /app/course-modules/:courseModuleId/lessons`
 
-### `GET /app/modules/:moduleId/content`
+| Вход | `courseModuleId` — UUID секции из `GET .../courses/:courseId/modules` |
+
+**Ответ `200`:** объект с **`courseModuleId`** и **`lessons`**: для каждого урока — `id`, `title`, `description`, `order`, **`unlockAfterLessonId`**, `createdAt`, `updatedAt` (только опубликованные уроки).
+
+---
+
+## 5. Контент урока и тест
+
+### `GET /app/lessons/:lessonId/content`
 
 **Целевой ответ `200`:**
 
@@ -361,7 +373,7 @@
 [
   {
     "id": "uuid",
-    "moduleId": "uuid",
+    "lessonId": "uuid",
     "type": "video | file | text | livestream | link",
     "title": "…",
     "content": "HTML или URL",
@@ -376,9 +388,9 @@
 
 ---
 
-### `GET /app/modules/:moduleId/quiz`
+### `GET /app/lessons/:lessonId/quiz`
 
-**Ответ `200`:** объект квиза: `id`, `moduleId`, `title`, `passingScore`, `maxAttempts`, `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`.  
+**Ответ `200`:** объект квиза: `id`, **`lessonId`**, `title`, `passingScore`, `maxAttempts`, `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`.  
 У каждого вопроса: `id`, `text`, `type` (`single` \| `multiple` \| `text`), `order`, `imageUrl`, **`answers`**: `[{ "id", "text", "createdAt", "updatedAt" }]` — **без** признака правильности.
 
 *(у `text` вопросов список `answers` может быть пустым)*
@@ -405,7 +417,7 @@
 
 Если незавершённая попытка уже есть — та же структура с `"resumed": true` (новая не создаётся).
 
-**Ошибки:** `400` (лимит попыток, нет вопросов), `403/404` (нет доступа к модулю).
+**Ошибки:** `400` (лимит попыток, нет вопросов), `403/404` (нет доступа к уроку).
 
 ---
 
@@ -446,7 +458,7 @@
 }
 ```
 
-При **`isPassed: true`** бэкенд дополнительно помечает прогресс модуля как завершённый.
+При **`isPassed: true`** бэкенд дополнительно помечает прогресс урока как завершённый.
 
 **Ошибки:** `400` (уже сдана, истекло время), `404` (нет попытки).
 
@@ -463,8 +475,8 @@
 ```json
 {
   "coursesCount": 2,
-  "modulesCompleted": 5,
-  "modulesInProgress": 1,
+  "lessonsCompleted": 5,
+  "lessonsInProgress": 1,
   "certificatesCount": 0,
   "courses": [
     {
@@ -484,15 +496,15 @@
 
 **Заголовок:** `Authorization: Bearer <accessToken>`
 
-**Ответ `200`:** массив, для каждой записи: `id`, `courseId`, `courseTitle`, `moduleId`, `moduleTitle`, `status` (`not_started` \| `in_progress` \| `completed`), `completedAt`, `watchedSeconds`, `updatedAt`.
+**Ответ `200`:** массив, для каждой записи: `id`, `courseId`, `courseTitle`, **`lessonId`**, **`lessonTitle`**, `status` (`not_started` \| `in_progress` \| `completed`), `completedAt`, `watchedSeconds`, `updatedAt`.
 
 ---
 
-### `PATCH /app/modules/:moduleId/progress`
+### `PATCH /app/lessons/:lessonId/progress`
 
 **Заголовок:** `Authorization: Bearer <accessToken>`
 
-Обновление прогресса по модулю (доступ проверяется как у контента модуля).
+Обновление прогресса по уроку (доступ проверяется как у контента урока).
 
 **Тело (все поля опционально):**
 
@@ -500,13 +512,13 @@
 |------|-----|----------|
 | `watchedSeconds` | number | Накопленное время просмотра (берётся максимум с сохранённым) |
 | `status` | `not_started` \| `in_progress` \| `completed` | Статус |
-| `completed` | boolean | Если `true` — модуль завершён (`completedAt` выставляется) |
+| `completed` | boolean | Если `true` — урок завершён (`completedAt` выставляется) |
 
-**Ответ `200`:** актуальная запись `{ id, courseId, moduleId, status, completedAt, watchedSeconds, updatedAt }`.
+**Ответ `200`:** актуальная запись `{ id, courseId, lessonId, status, completedAt, watchedSeconds, updatedAt }`.
 
 ---
 
-### `POST /app/modules/:moduleId/homework`
+### `POST /app/lessons/:lessonId/homework`
 
 **Заголовок:** `Authorization: Bearer <accessToken>`  
 **Тело:** `multipart/form-data` — поле **`file`** (обязательно), опционально **`comment`** (текст для учителя).
@@ -515,11 +527,11 @@
 
 Повторная отправка **заменяет** файл; выставленная ранее **оценка сбрасывается** (нужна повторная проверка админом).
 
-**Ответ `200`:** объект сдачи: `id`, `moduleId`, `courseId`, `fileUrl`, `originalFilename`, `mimeType`, `sizeBytes`, `studentComment`, `maxPoints`, `points` (null до проверки), `feedback`, `gradedAt`, `createdAt`, `updatedAt`.
+**Ответ `200`:** объект сдачи: `id`, **`lessonId`**, `courseId`, `fileUrl`, `originalFilename`, `mimeType`, `sizeBytes`, `studentComment`, `maxPoints`, `points` (null до проверки), `feedback`, `gradedAt`, `createdAt`, `updatedAt`.
 
 ---
 
-### `GET /app/modules/:moduleId/homework`
+### `GET /app/lessons/:lessonId/homework`
 
 **Ответ `200`:** `{ submission: null }` если ещё не сдавали; иначе `submission` — те же поля, что после POST.
 
@@ -543,7 +555,7 @@
 
 ```json
 {
-  "moduleId": "uuid",
+  "lessonId": "uuid",
   "language": "kk",
   "messages": [
     { "role": "user", "content": "Что такое сервопривод?" },
@@ -566,7 +578,7 @@
 
 ### `POST /app/ai/chat-profile`
 
-Прямой чат в профиле ученика, без привязки к модулю.
+Прямой чат в профиле ученика, без привязки к уроку.
 
 **Тело:**
 
@@ -594,7 +606,7 @@
 
 ### `POST /app/ai/chat-course`
 
-Чат по курсу (контекст всех опубликованных модулей курса).
+Чат по курсу (контекст всех опубликованных секций и уроков курса).
 
 **Тело:**
 
@@ -627,7 +639,7 @@
 ```json
 {
   "weakTopics": ["…"],
-  "repeatModuleIds": ["uuid"],
+  "repeatLessonIds": ["uuid"],
   "suggestedMaterials": ["…"],
   "summary": "Краткий текст для дашборда"
 }
@@ -668,12 +680,12 @@
 
 | Событие | XP | Примечание |
 |---------|-----|------------|
-| Модуль завершён (`PATCH .../progress`) | +20 | Первый переход в `completed` |
+| Урок завершён (`PATCH /app/lessons/.../progress`) | +20 | Первый переход в `completed` |
 | Тест сдан успешно | +50 | База |
 | + бонус «100%» | +30 | Если процент ответов = 100 |
 | + бонус «с первой попытки» | +30 | Если это первая завершённая попытка по этому тесту |
 | Сертификат по курсу выдан | +100 | При создании сертификата админом |
-| Первая сдача ДЗ по модулю | +10 | Только первая загрузка файла (не повторная замена) |
+| Первая сдача ДЗ по уроку | +10 | Только первая загрузка файла (не повторная замена) |
 | ДЗ оценено ≥ 80% от max | +25 | При выставлении оценки админом |
 | Новый день подряд (стрик) | +5 | За продление стрика |
 
@@ -702,8 +714,8 @@
 
 | Ключ | Условие |
 |------|---------|
-| `first_module` | Первый завершённый модуль |
-| `modules_10` / `modules_50` | 10 / 50 завершённых модулей |
+| `first_module` | Первый завершённый **урок** (ключ в БД прежний) |
+| `modules_10` / `modules_50` | 10 / 50 завершённых **уроков** (счётчик по завершённым урокам) |
 | `first_quiz_passed` | Первая успешная сдача теста |
 | `quizzes_5` / `quiz_master` | 5 / 10 успешных тестов |
 | `quiz_perfect` | Тест на 100% |
@@ -711,7 +723,7 @@
 | `first_course` | Первый сертификат |
 | `courses_3` | Три сертификата |
 | `homework_first` | Первая сдача ДЗ |
-| `homework_5` | Пять сдач ДЗ (разные модули) |
+| `homework_5` | Пять сдач ДЗ (по разным урокам) |
 | `homework_excellent` | Оценка за ДЗ ≥ 80% |
 | `streak_3` / `streak_7` / `streak_30` | Стрик 3 / 7 / 30 дней |
 

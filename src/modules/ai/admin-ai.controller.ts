@@ -14,7 +14,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ModuleContent } from '../../database/entities/module-content.entity';
+import { LessonContent } from '../../database/entities/lesson-content.entity';
 import { ModuleContentType } from '../../database/enums';
 import { AiQuizGeneratorService } from './ai-quiz-generator.service';
 import { AiSummarizeService } from './ai-summarize.service';
@@ -31,16 +31,16 @@ export class AdminAiController {
     private readonly quizGen: AiQuizGeneratorService,
     private readonly summarize: AiSummarizeService,
     private readonly transcription: AiTranscriptionService,
-    @InjectRepository(ModuleContent)
-    private readonly contentRepo: Repository<ModuleContent>,
+    @InjectRepository(LessonContent)
+    private readonly contentRepo: Repository<LessonContent>,
   ) {}
 
   @Post('quiz/generate')
   async generateQuiz(@Body() dto: AiGenerateQuizDto) {
-    let text = dto.moduleText?.trim() ?? '';
-    if (dto.moduleId && !text) {
+    let text = dto.lessonText?.trim() ?? '';
+    if (dto.lessonId && !text) {
       const items = await this.contentRepo.find({
-        where: { moduleId: dto.moduleId },
+        where: { lessonId: dto.lessonId },
         order: { order: 'ASC' },
       });
       text = items
@@ -54,7 +54,7 @@ export class AdminAiController {
     }
     if (text.length < 80) {
       throw new BadRequestException(
-        'Нужен moduleText или moduleId с текстовым контентом (мин. 80 символов)',
+        'Нужен lessonText или lessonId с текстовым контентом (мин. 80 символов)',
       );
     }
     const questions = await this.quizGen.generateFromModuleText(
@@ -68,9 +68,9 @@ export class AdminAiController {
   @Post('summarize')
   async summarizeModule(@Body() dto: AiSummarizeDto) {
     let full = dto.text?.trim() ?? '';
-    if (dto.moduleId && !full) {
+    if (dto.lessonId && !full) {
       const items = await this.contentRepo.find({
-        where: { moduleId: dto.moduleId },
+        where: { lessonId: dto.lessonId },
         order: { order: 'ASC' },
       });
       full = items
@@ -84,7 +84,7 @@ export class AdminAiController {
     }
     if (full.length < 40) {
       throw new BadRequestException(
-        'Нужен text или moduleId с текстовым контентом',
+        'Нужен text или lessonId с текстовым контентом',
       );
     }
     const summary = await this.summarize.summarizeModuleContent(full);

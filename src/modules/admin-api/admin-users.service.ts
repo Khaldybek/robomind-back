@@ -284,15 +284,15 @@ export class AdminUsersService {
     }
     const rows = await this.progress.find({
       where: { userId },
-      relations: { course: true, module: true },
+      relations: { course: true, lesson: true },
       order: { updatedAt: 'DESC' },
     });
     return rows.map((p) => ({
       id: p.id,
       courseId: p.courseId,
       courseTitle: p.course?.title ?? null,
-      moduleId: p.moduleId,
-      moduleTitle: p.module?.title ?? null,
+      lessonId: p.lessonId,
+      lessonTitle: p.lesson?.title ?? null,
       status: p.status,
       completedAt: p.completedAt,
       watchedSeconds: p.watchedSeconds,
@@ -345,13 +345,13 @@ export class AdminUsersService {
     const rows = await this.quizAttempts.find({
       where: { userId },
       relations: {
-        quiz: { module: { course: true } },
+        quiz: { lesson: { courseModule: { course: true } } },
       },
       order: { startedAt: 'DESC' },
     });
     return rows.map((a) => {
-      const mod = a.quiz?.module;
-      const course = mod?.course;
+      const les = a.quiz?.lesson;
+      const course = les?.courseModule?.course;
       return {
         id: a.id,
         quizId: a.quizId,
@@ -365,8 +365,8 @@ export class AdminUsersService {
         hasStoredAnswers: a.completedAt != null && a.answers != null,
         courseId: course?.id ?? null,
         courseTitle: course?.title ?? null,
-        moduleId: mod?.id ?? null,
-        moduleTitle: mod?.title ?? null,
+        lessonId: les?.id ?? null,
+        lessonTitle: les?.title ?? null,
         quizTitle: a.quiz?.title ?? null,
         createdAt: a.createdAt,
       };

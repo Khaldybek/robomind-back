@@ -1,0 +1,418 @@
+================================================================================
+  МИГРАЦИЯ API ДЛЯ ФРОНТЕНДА: «МОДУЛИ КУРСА» И «УРОКИ»
+  Версия документа: 1.0 (согласовано с бэкендом robomind-back)
+================================================================================
+
+Базовый префикс всех маршрутов:  /api/v1
+Пример полного URL:  https://<хост>/api/v1/app/courses
+
+
+--------------------------------------------------------------------------------
+1. ЗАЧЕМ ИЗМЕНИЛИ МОДЕЛЬ И API
+--------------------------------------------------------------------------------
+
+Раньше в продукте одна сущность называлась «модуль» и одновременно означала:
+  — раздел курса;
+  — урок с контентом, тестом, домашкой и прогрессом ученика.
+
+Это мешало масштабировать курс: нужна явная иерархия:
+
+  Курс
+    └── Модуль курса (секция)  …  в UI можно называть «модуль» или «раздел»
+          └── Урок  …  контент, квиз, ДЗ, прогресс
+
+В базе данных:
+  — таблица бывших «модулей-уроков» переименована в lessons (уроки);
+  — UUID старых записей СОХРАНЕНЫ: тот идентификатор, который раньше был
+    «moduleId» урока, теперь логически является «lessonId». Это важно для
+    миграции данных и для понимания: старые ссылки на UUID контента/прогресса
+    по сути указывают на тот же урок, но путь API и имена полей в JSON
+    изменились.
+
+Итог для фронтенда: ломающее изменение контракта — старые пути вида
+  /app/modules/:id/...
+  /admin/modules/:id/...
+больше не используются; нужно перейти на новые пути и поля, описанные ниже.
+
+
+--------------------------------------------------------------------------------
+2. КРАТКАЯ ТАБЛИЦА «БЫЛО → СТАЛО» (СМЫСЛ)
+--------------------------------------------------------------------------------
+
+  Было (студент / общий смысл)          Стало
+  --------------------------------     ------------------------------------
+  Список «модулей» курса               Список СЕКЦИЙ курса (модулей курса)
+  GET .../courses/:id/modules          Тот же путь, другой смысл ответа
+
+  Урок (раньше тоже «модуль»)           Отдельный ресурс «урок»
+  GET .../modules/:id/content          GET .../lessons/:lessonId/content
+  и т.д.
+
+  moduleId в теле запроса / ответе     lessonId (где речь об уроке)
+  unlockAfterModuleId (между уроками) unlockAfterLessonId
+
+  Секции между собой                   unlockAfterCourseModuleId
+
+
+--------------------------------------------------------------------------------
+3. РОЛЬ: СТУДЕНТ (student)
+--------------------------------------------------------------------------------
+
+Все маршруты: заголовок Authorization: Bearer <access_token>
+Роль в JWT: student (как и раньше).
+
+────────────────────────────────────────────────────────────────
+3.1. Курсы (без изменения путей; смысл части ответов в профиле — см. 3.6)
+────────────────────────────────────────────────────────────────
+
+GET /app/courses
+  Принимает: нет тела.
+  Возвращает: массив курсов с доступом — id, title, description, thumbnailUrl,
+              level, ageGroup, order, createdAt, updatedAt.
+
+
+GET /app/courses/:courseId/modules
+  Принимает: courseId в пути (UUID).
+  Возвращает: объект:
+    {
+      "course": {
+        "id", "title", "thumbnailUrl"
+      },
+      "modules": [
+        {
+          "id",                    // UUID СЕКЦИИ (модуля курса), НЕ урока
+          "title",
+          "description",
+          "order",
+          "unlockAfterCourseModuleId",  // nullable — разблокировка секции
+          "createdAt",
+          "updatedAt"
+        }
+      ]
+    }
+
+  Важно: поле в JSON по-прежнему называется "modules", но это СЕКЦИИ курса.
+  Список уроков внутри секции запрашивается отдельным эндпоинтом (3.2).
+
+
+GET /app/course-modules/:courseModuleId/lessons   [НОВЫЙ]
+  Принимает: courseModuleId в пути — id секции из modules[].id ответа выше.
+  Возвращает:
+    {
+      "courseModuleId": "<uuid>",
+      "lessons": [
+        {
+          "id",                    // UUID урока (раньше это был «модуль-урок»)
+          "title",
+          "description",
+          "order",
+          "unlockAfterLessonId",   // nullable — предыдущий урок должен быть
+          "createdAt",             //   завершён в прогрессе
+          "updatedAt"
+        }
+      ]
+    }
+
+
+────────────────────────────────────────────────────────────────
+3.2. Урок: контент, тест, прогресс, домашка (новые пути)
+────────────────────────────────────────────────────────────────
+
+Базовый префикс: /app/lessons/:lessonId/...
+
+GET /app/lessons/:lessonId/content
+  Принимает: lessonId (UUID).
+  Возвращает: массив блоков контента. Каждый элемент:
+    id, lessonId, type, title, content, fileUrl, duration, order,
+    livestreamUrl, livestreamStartsAt, createdAt, updatedAt
+  (раньше в ответе было поле moduleId — теперь lessonId.)
+
+
+GET /app/lessons/:lessonId/quiz
+  Принимает: lessonId.
+  Возвращает: объект квиза для ученика (без признаков правильности ответов):
+    id, lessonId, title, passingScore, maxAttempts, timeLimitMinutes,
+    shuffleQuestions, createdAt, updatedAt,
+    questions: [ { id, text, type, order, imageUrl, answers: [...] } ]
+  (раньше было moduleId в корне квиза.)
+
+
+PATCH /app/lessons/:lessonId/progress
+  Принимает: JSON-тело (все поля опционально):
+    watchedSeconds   number >= 0
+    status           enum: not_started | in_progress | completed
+    completed        boolean — если true, урок помечается завершённым
+  Возвращает: актуальная запись прогресса:
+    id, courseId, lessonId, status, completedAt, watchedSeconds, updatedAt
+
+  Примечание: DTO на бэкенде по имени файла всё ещё может называться
+  PatchModuleProgressDto — это не ошибка; для фронта важны только поля тела.
+
+
+POST /app/lessons/:lessonId/homework
+  Принимает: multipart/form-data
+    file     — обязательно (файл сдачи)
+    comment  — опционально (текст)
+  Возвращает: объект сдачи (не обёрнутый в submission при успешной записи):
+    id, lessonId, courseId, fileUrl, originalFilename, mimeType, sizeBytes,
+    studentComment, maxPoints, points, feedback, gradedAt, createdAt, updatedAt
+
+
+GET /app/lessons/:lessonId/homework
+  Принимает: lessonId.
+  Возвращает:
+    { "submission": null }
+    или
+    { "submission": { ... те же поля, что после POST ... } }
+
+
+────────────────────────────────────────────────────────────────
+3.3. Квиз: попытки (пути НЕ менялись)
+────────────────────────────────────────────────────────────────
+
+POST /app/quizzes/:quizId/attempt
+POST /app/attempts/:attemptId/submit
+
+Идентификатор квиза (quizId) — по-прежнему UUID квиза, не урока.
+После сдачи с isPassed: true прогресс обновляется на уровне УРОКА, связанного
+с этим квизом.
+
+
+────────────────────────────────────────────────────────────────
+3.4. ИИ (студент)
+────────────────────────────────────────────────────────────────
+
+POST /app/ai/chat
+  Принимает: JSON
+    lessonId   string UUID — обязательно (раньше было moduleId)
+    messages   массив { role: "user"|"assistant", content: string }
+    language   опционально "ru" | "kk"
+  Возвращает: { "reply": "..." }
+
+
+POST /app/ai/chat-profile
+POST /app/ai/chat-course
+  Без привязки к уроку / с courseId — как в документации API-STUDENT-PANEL.md.
+
+
+GET /app/ai/recommendations
+  Возвращает (важно для типов на фронте):
+    weakTopics, suggestedMaterials, summary,
+    repeatLessonIds  — массив UUID уроков для повторения
+  (раньше в спецификации могло быть repeatModuleIds — заменить на
+   repeatLessonIds; бэкенд при разборе ответа модели может принять и старый
+   ключ от ИИ, но в типах и UI лучше ориентироваться на repeatLessonIds.)
+
+
+────────────────────────────────────────────────────────────────
+3.5. Профиль, дашборд, прогресс (изменились поля в JSON)
+────────────────────────────────────────────────────────────────
+
+GET /app/users/me/progress
+  Возвращает: массив записей прогресса по УРОКАМ:
+    id, courseId, courseTitle, lessonId, lessonTitle,
+    status, completedAt, watchedSeconds, updatedAt
+  (раньше: moduleId, moduleTitle.)
+
+
+GET /app/users/me/dashboard
+  Возвращает, среди прочего:
+    lessonsCompleted, lessonsInProgress, certificatesCount, coursesCount,
+    courses: [ { id, title, thumbnailUrl, level, order } ]
+  (раньше могли быть modulesCompleted / modulesInProgress — заменить.)
+
+
+GET /app/users/me/profile
+  В блоке курсов по каждому курсу теперь считаются УРОКИ:
+    totalLessons, completedLessons, lessonsInProgress, progressPercent
+  В performance:
+    totalLessons, lessonsCompleted, lessonsInProgress, overallProgressPercent,
+    totalQuizAttempts, averageQuizPercent, coursesCount, certificatesCount
+
+
+────────────────────────────────────────────────────────────────
+3.6. Геймификация (ключи бейджей в БД)
+────────────────────────────────────────────────────────────────
+
+Событие на бэкенде при завершении урока: lesson_completed (внутренняя логика).
+Ключи бейджей в ответах API (first_module, modules_10 и т.д.) могут сохранять
+старые имена из истории продукта, но СЧЁТ ведётся по завершённым УРОКАМ
+(строки user_progress со статусом completed).
+
+
+--------------------------------------------------------------------------------
+4. РОЛЬ: СУПЕР-АДМИНИСТРАТОР (super_admin)
+--------------------------------------------------------------------------------
+
+Заголовок: Authorization: Bearer <access_token>
+
+
+────────────────────────────────────────────────────────────────
+4.1. Курс и секции (модули курса)
+────────────────────────────────────────────────────────────────
+
+GET /admin/courses/:courseId/modules
+  Список секций курса с пагинацией/фильтрами (query см. бэкенд и API-STRUCTURE).
+  Для super_admin доступны фильтры по публикации и т.д.
+
+POST /admin/courses/:courseId/modules
+  Создание секции (только super_admin).
+  Тело: см. CreateCourseModuleDto в коде / документации admin.
+
+
+GET /admin/course-modules/:courseModuleId
+PATCH /admin/course-modules/:courseModuleId
+DELETE /admin/course-modules/:courseModuleId
+  CRUD одной секции по её id (только super_admin).
+
+
+────────────────────────────────────────────────────────────────
+4.2. Уроки и контент (раньше это был единый «admin/modules»)
+────────────────────────────────────────────────────────────────
+
+Базовый путь: /admin/lessons
+
+GET /admin/lessons?courseModuleId=<uuid>&...
+  Список уроков внутри выбранной секции (пагинация в query).
+
+POST /admin/lessons
+  Создание урока (в теле указывается привязка к courseModuleId и поля урока).
+
+GET /admin/lessons/:lessonId
+PATCH /admin/lessons/:lessonId
+DELETE /admin/lessons/:lessonId
+
+GET    /admin/lessons/:lessonId/contents
+POST   /admin/lessons/:lessonId/contents
+POST   /admin/lessons/:lessonId/contents/from-file   (multipart)
+POST   /admin/lessons/:lessonId/content              (алиас POST contents)
+PATCH  /admin/lessons/:lessonId/contents/:contentId
+DELETE /admin/lessons/:lessonId/contents/:contentId
+
+Тела DTO для блоков контента в коде могут называться CreateModuleContentDto /
+PatchModuleContentDto — это исторические имена классов; в JSON ответов
+идентификатор привязки — lessonId.
+
+
+────────────────────────────────────────────────────────────────
+4.3. Квизы админки
+────────────────────────────────────────────────────────────────
+
+GET    /admin/lessons/:lessonId/quiz
+POST   /admin/lessons/:lessonId/quiz
+POST   /admin/lessons/:lessonId/quiz/import-generated
+
+Дальнейшее редактирование вопросов/ответов — как раньше через
+/admin/quizzes/:quizId, /admin/questions/..., /admin/answers/...
+
+
+────────────────────────────────────────────────────────────────
+4.4. Домашние задания и журнал (super_admin + school_admin)
+────────────────────────────────────────────────────────────────
+
+GET /admin/homework-submissions
+  Query: обязательно lessonId (UUID урока).
+         Для super_admin дополнительно обязателен schoolId (UUID школы).
+         Опционально: page, limit, search.
+
+PATCH /admin/homework-submissions/:submissionId
+  Тело: оценка (points, опционально maxPoints, feedback) — как в документации.
+
+GET /admin/lessons/:lessonId/grade-overview
+  Query schoolId обязателен для super_admin (выбор школы для журнала).
+  Для school_admin школа берётся из JWT.
+
+
+────────────────────────────────────────────────────────────────
+4.5. ИИ (super_admin)
+────────────────────────────────────────────────────────────────
+
+POST /admin/ai/quiz/generate
+  Тело: questionCount (обяз.), difficulty (опц.),
+        либо lessonText (строка >= 80 символов),
+        либо lessonId (UUID) — тогда текст собирается из текстовых блоков
+        контента урока.
+
+POST /admin/ai/summarize
+  Тело: либо text (>= 40 символов), либо lessonId — контент урока.
+
+
+────────────────────────────────────────────────────────────────
+4.6. Пользователи: прогресс и попытки квизов
+────────────────────────────────────────────────────────────────
+
+GET /admin/users/:userId/progress
+  Элементы массива теперь содержат lessonId, lessonTitle (вместо moduleId,
+  moduleTitle).
+
+GET /admin/users/:userId/quiz-attempts
+  В каждой попытке: lessonId, lessonTitle (и courseId/courseTitle как раньше
+  по смыслу курса).
+
+
+--------------------------------------------------------------------------------
+5. РОЛЬ: АДМИНИСТРАТОР ШКОЛЫ (school_admin)
+--------------------------------------------------------------------------------
+
+Часть маршрутов совпадает с super_admin по URL, но с ограничениями:
+
+  — GET /admin/courses/:courseId/modules — только опубликованные секции
+    (тот же путь, что у super_admin, но read-only фильтр).
+
+  — CRUD секций и уроков через /admin/course-modules/... и /admin/lessons/...
+    в типовой конфигурации рассчитаны на super_admin; у school_admin свой
+    набор разрешённых операций — сверяйте с docs/API-SCHOOL-ADMIN-BACKEND.md
+    и фактическими @Roles в контроллерах.
+
+  — GET /admin/homework-submissions, PATCH .../homework-submissions/:id,
+    GET /admin/lessons/:lessonId/grade-overview — доступны с ролью
+    school_admin в пределах своей школы (как и раньше по смыслу).
+
+
+--------------------------------------------------------------------------------
+6. ЧТО ДЛЯ ФРОНТЕНДА НЕ МЕНЯЛОСЬ (КРАТКО)
+--------------------------------------------------------------------------------
+
+  — Auth: /auth/* (регистрация, логин, refresh, logout, пароль).
+  — Гео для студента: /app/cities, districts, schools.
+  — Профиль PATCH /app/users/me, аватар.
+  — Старт и сдача квиза по quizId/attemptId: /app/quizzes/..., /app/attempts/...
+  — Геймификация: пути /app/gamification/* (меняется смысл подсчёта модулей
+    → уроков; ключи бейджей в JSON могут остаться прежними строками).
+
+Если сомнение — смотрите актуальные docs/API-STUDENT-PANEL.md и
+docs/API-STRUCTURE.md в репозитории.
+
+
+--------------------------------------------------------------------------------
+7. ЧЕКЛИСТ МИГРАЦИИ ФРОНТЕНДА
+--------------------------------------------------------------------------------
+
+[ ] Заменить все вызовы GET/PATCH/POST .../app/modules/:id/... на .../app/lessons/:lessonId/...
+[ ] После выбора курса: сначала GET courses/:id/modules (секции), затем для
+    каждой открытой секции GET course-modules/:courseModuleId/lessons
+[ ] Везде в типах TypeScript: Module → Lesson там, где речь об уроке;
+    ввести тип CourseSection / CourseModule для элементов modules[]
+[ ] Контент квиза: moduleId → lessonId в корне объекта квиза
+[ ] Прогресс: moduleId/moduleTitle → lessonId/lessonTitle
+[ ] Домашка submission: moduleId → lessonId
+[ ] ИИ чат: moduleId → lessonId; рекомендации: repeatModuleIds → repeatLessonIds
+[ ] Профиль/дашборд: поля счётчиков модулей → уроков (см. раздел 3.5)
+[ ] Админка: все старые /admin/modules/... заменить на /admin/lessons/...
+    и при необходимости /admin/course-modules/...
+[ ] Синхронный деплой с бэкендом (старые эндпоинты не поддерживаются)
+
+
+--------------------------------------------------------------------------------
+8. ДОПОЛНИТЕЛЬНЫЕ ИСТОЧНИКИ В РЕПОЗИТОРИИ
+--------------------------------------------------------------------------------
+
+  docs/API-STUDENT-PANEL.md   — подробные тела запросов/ответов для студента
+  docs/API-STRUCTURE.md       — сводная таблица путей
+  docs/API-SUPER-ADMIN-PANEL.md, docs/API-SCHOOL-ADMIN-BACKEND.md,
+  docs/REST-API.md            — могут ещё содержать устаревшие пути; при
+                                расхождении приоритет у кода и двух файлов выше
+
+================================================================================
+Конец файла
+================================================================================

@@ -10,8 +10,9 @@ import { City } from '../../database/entities/city.entity';
 import { District } from '../../database/entities/district.entity';
 import { School } from '../../database/entities/school.entity';
 import { Course } from '../../database/entities/course.entity';
-import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
-import { ModuleContent } from '../../database/entities/module-content.entity';
+import { CourseModule } from '../../database/entities/course-module.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
+import { LessonContent } from '../../database/entities/lesson-content.entity';
 import { CourseAccess } from '../../database/entities/course-access.entity';
 import { User } from '../../database/entities/user.entity';
 import { Quiz } from '../../database/entities/quiz.entity';
@@ -38,10 +39,12 @@ export class AppStudentService {
     private readonly schools: Repository<School>,
     @InjectRepository(Course)
     private readonly courses: Repository<Course>,
-    @InjectRepository(CourseModuleEntity)
-    private readonly modules: Repository<CourseModuleEntity>,
-    @InjectRepository(ModuleContent)
-    private readonly moduleContents: Repository<ModuleContent>,
+    @InjectRepository(CourseModule)
+    private readonly courseModules: Repository<CourseModule>,
+    @InjectRepository(Lesson)
+    private readonly lessons: Repository<Lesson>,
+    @InjectRepository(LessonContent)
+    private readonly lessonContents: Repository<LessonContent>,
     @InjectRepository(CourseAccess)
     private readonly courseAccess: Repository<CourseAccess>,
     @InjectRepository(User)
@@ -161,62 +164,69 @@ export class AppStudentService {
     ]);
 
     const courseIds = courses.map((c) => c.id);
-    const publishedModules = courseIds.length
-      ? await this.modules.find({
-          where: { courseId: In(courseIds), isPublished: true },
-          select: { id: true, courseId: true },
-        })
-      : [];
+    const publishedLessons =
+      courseIds.length > 0
+        ? await this.lessons.find({
+            where: {
+              isPublished: true,
+              courseModule: { courseId: In(courseIds) },
+            },
+            relations: ['courseModule'],
+          })
+        : [];
 
-    const modulesByCourse = new Map<string, string[]>();
-    for (const m of publishedModules) {
-      const arr = modulesByCourse.get(m.courseId) ?? [];
-      arr.push(m.id);
-      modulesByCourse.set(m.courseId, arr);
+    const lessonsByCourse = new Map<string, string[]>();
+    for (const l of publishedLessons) {
+      const cid = l.courseModule.courseId;
+      const arr = lessonsByCourse.get(cid) ?? [];
+      arr.push(l.id);
+      lessonsByCourse.set(cid, arr);
     }
 
-    const completedModuleIds = new Set(
+    const completedLessonIds = new Set(
       progressRows
         .filter((p) => p.status === ProgressStatus.COMPLETED)
-        .map((p) => p.moduleId),
+        .map((p) => p.lessonId),
     );
-    const inProgressModuleIds = new Set(
+    const inProgressLessonIds = new Set(
       progressRows
         .filter((p) => p.status === ProgressStatus.IN_PROGRESS)
-        .map((p) => p.moduleId),
+        .map((p) => p.lessonId),
     );
 
     const courseProgress = courses.map((c) => {
-      const moduleIds = modulesByCourse.get(c.id) ?? [];
-      const totalModules = moduleIds.length;
-      const completedModules = moduleIds.filter((id) =>
-        completedModuleIds.has(id),
+      const lessonIds = lessonsByCourse.get(c.id) ?? [];
+      const totalLessons = lessonIds.length;
+      const completedLessons = lessonIds.filter((id) =>
+        completedLessonIds.has(id),
       ).length;
-      const modulesInProgress = moduleIds.filter((id) =>
-        inProgressModuleIds.has(id),
+      const lessonsInProgress = lessonIds.filter((id) =>
+        inProgressLessonIds.has(id),
       ).length;
       const progressPercent =
-        totalModules > 0
-          ? Math.round((completedModules / totalModules) * 1000) / 10
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 1000) / 10
           : 0;
       return {
         ...c,
-        totalModules,
-        completedModules,
-        modulesInProgress,
+        totalLessons,
+        completedLessons,
+        lessonsInProgress,
         progressPercent,
       };
     });
 
-    const totalModules = publishedModules.length;
-    const modulesCompleted = publishedModules.filter((m) =>
-      completedModuleIds.has(m.id),
+    const totalLessons = publishedLessons.length;
+    const lessonsCompleted = publishedLessons.filter((l) =>
+      completedLessonIds.has(l.id),
     ).length;
-    const modulesInProgress = publishedModules.filter((m) =>
-      inProgressModuleIds.has(m.id),
+    const lessonsInProgressCount = publishedLessons.filter((l) =>
+      inProgressLessonIds.has(l.id),
     ).length;
     const overallProgressPercent =
-      totalModules > 0 ? Math.round((modulesCompleted / totalModules) * 1000) / 10 : 0;
+      totalLessons > 0
+        ? Math.round((lessonsCompleted / totalLessons) * 1000) / 10
+        : 0;
 
     const completedAttempts = attempts.filter(
       (a) => a.completedAt && a.maxScore > 0,
@@ -240,9 +250,9 @@ export class AppStudentService {
       performance: {
         coursesCount: courses.length,
         certificatesCount: certificates.length,
-        totalModules,
-        modulesCompleted,
-        modulesInProgress,
+        totalLessons,
+        lessonsCompleted,
+        lessonsInProgress: lessonsInProgressCount,
         overallProgressPercent,
         totalQuizAttempts: attempts.length,
         averageQuizPercent,
@@ -278,15 +288,15 @@ export class AppStudentService {
   async listMyProgress(userId: string) {
     const rows = await this.userProgress.find({
       where: { userId },
-      relations: { course: true, module: true },
+      relations: { course: true, lesson: true },
       order: { updatedAt: 'DESC' },
     });
     return rows.map((p) => ({
       id: p.id,
       courseId: p.courseId,
       courseTitle: p.course?.title ?? null,
-      moduleId: p.moduleId,
-      moduleTitle: p.module?.title ?? null,
+      lessonId: p.lessonId,
+      lessonTitle: p.lesson?.title ?? null,
       status: p.status,
       completedAt: p.completedAt,
       watchedSeconds: p.watchedSeconds,
@@ -314,7 +324,7 @@ export class AppStudentService {
   /** Сводка для главной: доступные курсы, прогресс, сертификаты */
   async getDashboard(userId: string) {
     const courses = await this.listCourses(userId);
-    const [modulesCompleted, modulesInProgress, certificatesCount] =
+    const [lessonsCompleted, lessonsInProgress, certificatesCount] =
       await Promise.all([
         this.userProgress.count({
           where: { userId, status: ProgressStatus.COMPLETED },
@@ -326,8 +336,8 @@ export class AppStudentService {
       ]);
     return {
       coursesCount: courses.length,
-      modulesCompleted,
-      modulesInProgress,
+      lessonsCompleted,
+      lessonsInProgress,
       certificatesCount,
       courses: courses.map((c) => ({
         id: c.id,
@@ -339,20 +349,21 @@ export class AppStudentService {
     };
   }
 
-  async upsertModuleProgress(
+  async upsertLessonProgress(
     userId: string,
-    moduleId: string,
+    lessonId: string,
     dto: PatchModuleProgressDto,
   ) {
-    const mod = await this.assertModuleAccessible(userId, moduleId);
+    const lesson = await this.assertLessonAccessible(userId, lessonId);
+    const courseId = lesson.courseModule.courseId;
     let row = await this.userProgress.findOne({
-      where: { userId, moduleId },
+      where: { userId, lessonId },
     });
     if (!row) {
       row = this.userProgress.create({
         userId,
-        courseId: mod.courseId,
-        moduleId,
+        courseId,
+        lessonId,
         status: ProgressStatus.NOT_STARTED,
         completedAt: null,
         watchedSeconds: 0,
@@ -389,16 +400,15 @@ export class AppStudentService {
     await this.userProgress.save(row);
 
     if (!wasCompleted && isNowCompleted) {
-      // Fire-and-forget: не блокируем ответ геймификационными расчётами
       void this.gamification
-        .processEvent(userId, { type: 'module_completed' })
+        .processEvent(userId, { type: 'lesson_completed' })
         .catch(() => undefined);
     }
 
     return {
       id: row.id,
       courseId: row.courseId,
-      moduleId: row.moduleId,
+      lessonId: row.lessonId,
       status: row.status,
       completedAt: row.completedAt,
       watchedSeconds: row.watchedSeconds,
@@ -423,28 +433,93 @@ export class AppStudentService {
     }
   }
 
-  async assertModuleAccessible(userId: string, moduleId: string) {
-    const mod = await this.modules.findOne({ where: { id: moduleId } });
-    if (!mod) throw new NotFoundException('Модуль не найден');
-    const course = await this.courses.findOne({ where: { id: mod.courseId } });
+  async assertLessonAccessible(userId: string, lessonId: string) {
+    const lesson = await this.lessons.findOne({
+      where: { id: lessonId },
+      relations: { courseModule: { course: true } },
+    });
+    if (!lesson) throw new NotFoundException('Урок не найден');
+    const course = lesson.courseModule.course;
     if (!course?.isPublished) throw new NotFoundException('Курс недоступен');
-    await this.assertCourseAccess(userId, mod.courseId);
-    if (!mod.isPublished) {
-      throw new ForbiddenException('Модуль не опубликован');
+    const courseId = lesson.courseModule.courseId;
+    await this.assertCourseAccess(userId, courseId);
+    if (!lesson.courseModule.isPublished) {
+      throw new ForbiddenException('Модуль курса не опубликован');
     }
-    if (mod.unlockAfterModuleId) {
+    if (!lesson.isPublished) {
+      throw new ForbiddenException('Урок не опубликован');
+    }
+    if (lesson.courseModule.unlockAfterCourseModuleId) {
+      const prevCmId = lesson.courseModule.unlockAfterCourseModuleId;
+      const prevLessons = await this.lessons.find({
+        where: { courseModuleId: prevCmId, isPublished: true },
+        select: { id: true },
+      });
+      if (prevLessons.length > 0) {
+        const done = await this.userProgress.count({
+          where: {
+            userId,
+            status: ProgressStatus.COMPLETED,
+            lessonId: In(prevLessons.map((x) => x.id)),
+          },
+        });
+        if (done < prevLessons.length) {
+          throw new ForbiddenException(
+            'Сначала завершите предыдущий модуль курса',
+          );
+        }
+      }
+    }
+    if (lesson.unlockAfterLessonId) {
       const prev = await this.userProgress.findOne({
         where: {
           userId,
-          moduleId: mod.unlockAfterModuleId,
+          lessonId: lesson.unlockAfterLessonId,
           status: ProgressStatus.COMPLETED,
         },
       });
       if (!prev) {
-        throw new ForbiddenException('Сначала завершите предыдущий модуль');
+        throw new ForbiddenException('Сначала завершите предыдущий урок');
       }
     }
-    return mod;
+    return lesson;
+  }
+
+  async assertCourseModuleAccessible(userId: string, courseModuleId: string) {
+    const cm = await this.courseModules.findOne({
+      where: { id: courseModuleId },
+      relations: { course: true },
+    });
+    if (!cm) throw new NotFoundException('Модуль курса не найден');
+    if (!cm.course?.isPublished) throw new NotFoundException('Курс недоступен');
+    await this.assertCourseAccess(userId, cm.courseId);
+    if (!cm.isPublished) {
+      throw new ForbiddenException('Модуль курса не опубликован');
+    }
+    if (cm.unlockAfterCourseModuleId) {
+      const prevLessons = await this.lessons.find({
+        where: {
+          courseModuleId: cm.unlockAfterCourseModuleId,
+          isPublished: true,
+        },
+        select: { id: true },
+      });
+      if (prevLessons.length > 0) {
+        const done = await this.userProgress.count({
+          where: {
+            userId,
+            status: ProgressStatus.COMPLETED,
+            lessonId: In(prevLessons.map((x) => x.id)),
+          },
+        });
+        if (done < prevLessons.length) {
+          throw new ForbiddenException(
+            'Сначала завершите предыдущий модуль курса',
+          );
+        }
+      }
+    }
+    return cm;
   }
 
   async listCourses(userId: string) {
@@ -474,11 +549,12 @@ export class AppStudentService {
     }));
   }
 
-  async listModules(userId: string, courseId: string) {
+  /** Секции курса (модули курса) */
+  async listCourseModules(userId: string, courseId: string) {
     await this.assertCourseAccess(userId, courseId);
     const course = await this.courses.findOne({ where: { id: courseId } });
     if (!course?.isPublished) throw new NotFoundException('Курс не найден');
-    const mods = await this.modules.find({
+    const mods = await this.courseModules.find({
       where: { courseId, isPublished: true },
       order: { order: 'ASC', id: 'ASC' },
     });
@@ -493,22 +569,42 @@ export class AppStudentService {
         title: m.title,
         description: m.description,
         order: m.order,
-        unlockAfterModuleId: m.unlockAfterModuleId,
+        unlockAfterCourseModuleId: m.unlockAfterCourseModuleId,
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
       })),
     };
   }
 
-  async getModuleContent(userId: string, moduleId: string) {
-    await this.assertModuleAccessible(userId, moduleId);
-    const rows = await this.moduleContents.find({
-      where: { moduleId },
+  async listLessonsInCourseModule(userId: string, courseModuleId: string) {
+    await this.assertCourseModuleAccessible(userId, courseModuleId);
+    const list = await this.lessons.find({
+      where: { courseModuleId, isPublished: true },
+      order: { order: 'ASC', id: 'ASC' },
+    });
+    return {
+      courseModuleId,
+      lessons: list.map((l) => ({
+        id: l.id,
+        title: l.title,
+        description: l.description,
+        order: l.order,
+        unlockAfterLessonId: l.unlockAfterLessonId,
+        createdAt: l.createdAt,
+        updatedAt: l.updatedAt,
+      })),
+    };
+  }
+
+  async getLessonContent(userId: string, lessonId: string) {
+    await this.assertLessonAccessible(userId, lessonId);
+    const rows = await this.lessonContents.find({
+      where: { lessonId },
       order: { order: 'ASC', id: 'ASC' },
     });
     return rows.map((row) => ({
       id: row.id,
-      moduleId: row.moduleId,
+      lessonId: row.lessonId,
       type: row.type,
       title: row.title,
       content: row.content,
@@ -538,7 +634,7 @@ export class AppStudentService {
     if (q.shuffleQuestions) qs = this.shuffle(qs);
     return {
       id: q.id,
-      moduleId: q.moduleId,
+      lessonId: q.lessonId,
       title: q.title,
       passingScore: q.passingScore,
       maxAttempts: q.maxAttempts,
@@ -564,13 +660,13 @@ export class AppStudentService {
     };
   }
 
-  async getModuleQuiz(userId: string, moduleId: string) {
-    await this.assertModuleAccessible(userId, moduleId);
+  async getLessonQuiz(userId: string, lessonId: string) {
+    await this.assertLessonAccessible(userId, lessonId);
     const q = await this.quizzes.findOne({
-      where: { moduleId },
+      where: { lessonId },
       relations: { questions: { answers: true } },
     });
-    if (!q) throw new NotFoundException('Тест для модуля не найден');
+    if (!q) throw new NotFoundException('Тест для урока не найден');
     return this.quizToStudentJson(q);
   }
 
@@ -580,7 +676,7 @@ export class AppStudentService {
       relations: { questions: true },
     });
     if (!quiz) throw new NotFoundException('Тест не найден');
-    await this.assertModuleAccessible(userId, quiz.moduleId);
+    await this.assertLessonAccessible(userId, quiz.lessonId);
 
     const n = await this.quizAttempts.count({ where: { quizId, userId } });
     if (n >= quiz.maxAttempts) {
@@ -673,7 +769,8 @@ export class AppStudentService {
       throw new BadRequestException('Тест повреждён');
     }
 
-    const mod = await this.assertModuleAccessible(userId, quiz.moduleId);
+    const lesson = await this.assertLessonAccessible(userId, quiz.lessonId);
+    const courseId = lesson.courseModule.courseId;
 
     if (quiz.timeLimitMinutes) {
       const deadline = new Date(
@@ -707,13 +804,13 @@ export class AppStudentService {
 
     if (isPassed) {
       let prog = await this.userProgress.findOne({
-        where: { userId, moduleId: quiz.moduleId },
+        where: { userId, lessonId: quiz.lessonId },
       });
       if (!prog) {
         prog = this.userProgress.create({
           userId,
-          courseId: mod.courseId,
-          moduleId: quiz.moduleId,
+          courseId,
+          lessonId: quiz.lessonId,
           status: ProgressStatus.NOT_STARTED,
           completedAt: null,
           watchedSeconds: 0,

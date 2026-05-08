@@ -5,8 +5,9 @@ import { District } from '../../database/entities/district.entity';
 import { School } from '../../database/entities/school.entity';
 import { User } from '../../database/entities/user.entity';
 import { Course } from '../../database/entities/course.entity';
-import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
-import { ModuleContent } from '../../database/entities/module-content.entity';
+import { CourseModule } from '../../database/entities/course-module.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
+import { LessonContent } from '../../database/entities/lesson-content.entity';
 import { UserProgress } from '../../database/entities/user-progress.entity';
 import { Certificate } from '../../database/entities/certificate.entity';
 import { CourseAccess } from '../../database/entities/course-access.entity';
@@ -22,8 +23,10 @@ import { AdminGeoController } from './admin-geo.controller';
 import { AdminGeoService } from './admin-geo.service';
 import { AdminCoursesController } from './admin-courses.controller';
 import { AdminCoursesService } from './admin-courses.service';
-import { AdminModulesController } from './admin-modules.controller';
-import { AdminModulesService } from './admin-modules.service';
+import { AdminCourseModulesController } from './admin-course-modules.controller';
+import { AdminCourseModulesService } from './admin-course-modules.service';
+import { AdminLessonsController } from './admin-lessons.controller';
+import { AdminLessonsService } from './admin-lessons.service';
 import { AdminUploadController } from './admin-upload.controller';
 import { AdminUploadService } from './admin-upload.service';
 import { AdminSchoolAdminsController } from './admin-school-admins.controller';
@@ -51,8 +54,9 @@ import { GamificationModule } from '../gamification/gamification.module';
       School,
       User,
       Course,
-      CourseModuleEntity,
-      ModuleContent,
+      CourseModule,
+      Lesson,
+      LessonContent,
       UserProgress,
       Certificate,
       CourseAccess,
@@ -71,7 +75,8 @@ import { GamificationModule } from '../gamification/gamification.module';
     AdminUsersController,
     AdminGeoController,
     AdminCoursesController,
-    AdminModulesController,
+    AdminCourseModulesController,
+    AdminLessonsController,
     AdminUploadController,
     AdminSchoolAdminsController,
     AdminQuizController,
@@ -84,7 +89,8 @@ import { GamificationModule } from '../gamification/gamification.module';
   providers: [
     AdminGeoService,
     AdminCoursesService,
-    AdminModulesService,
+    AdminCourseModulesService,
+    AdminLessonsService,
     AdminUploadService,
     AdminSchoolAdminsService,
     AdminUsersService,

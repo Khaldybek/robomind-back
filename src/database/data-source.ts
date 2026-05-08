@@ -9,8 +9,9 @@ import {
   User,
   Course,
   CourseAccess,
-  Module,
-  ModuleContent,
+  CourseModule,
+  Lesson,
+  LessonContent,
   Quiz,
   Question,
   Answer,
@@ -25,7 +26,7 @@ import {
   PasswordResetToken,
   UserGamification,
   UserBadge,
-  ModuleHomeworkSubmission,
+  LessonHomeworkSubmission,
 } from './entities';
 import { getRawPostgresDataSourceOptions } from './postgres-connection';
 import { InitialSchema1742274000000 } from './migrations/1742274000000-InitialSchema';
@@ -37,6 +38,7 @@ import { PasswordResetTokens1742500000000 } from './migrations/1742500000000-Pas
 import { Gamification1742600000000 } from './migrations/1742600000000-Gamification';
 import { ModuleHomeworkSubmissions1742700000000 } from './migrations/1742700000000-ModuleHomeworkSubmissions';
 import { GamificationExpand1742800000000 } from './migrations/1742800000000-GamificationExpand';
+import { CourseModulesAndLessons1742900000000 } from './migrations/1742900000000-CourseModulesAndLessons';
 
 config({ path: join(__dirname, '../../.env') });
 
@@ -50,8 +52,9 @@ export default new DataSource({
     User,
     Course,
     CourseAccess,
-    Module,
-    ModuleContent,
+    CourseModule,
+    Lesson,
+    LessonContent,
     Quiz,
     Question,
     Answer,
@@ -66,7 +69,7 @@ export default new DataSource({
     PasswordResetToken,
     UserGamification,
     UserBadge,
-    ModuleHomeworkSubmission,
+    LessonHomeworkSubmission,
   ],
   migrations: [
     InitialSchema1742274000000,
@@ -78,6 +81,7 @@ export default new DataSource({
     Gamification1742600000000,
     ModuleHomeworkSubmissions1742700000000,
     GamificationExpand1742800000000,
+    CourseModulesAndLessons1742900000000,
   ],
   synchronize: false,
   logging: process.env.TYPEORM_LOGGING === 'true',

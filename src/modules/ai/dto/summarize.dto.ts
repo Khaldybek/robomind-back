@@ -3,7 +3,7 @@ import { IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 export class AiSummarizeDto {
   @IsOptional()
   @IsUUID()
-  moduleId?: string;
+  lessonId?: string;
 
   @IsOptional()
   @IsString()

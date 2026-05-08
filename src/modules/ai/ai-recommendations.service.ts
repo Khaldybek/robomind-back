@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QuizAttempt } from '../../database/entities/quiz-attempt.entity';
 import { UserProgress } from '../../database/entities/user-progress.entity';
-import { ProgressStatus } from '../../database/enums';
 import { AiFeature } from '../../database/enums';
 import { OpenAiService } from './openai.service';
 import { AiQuotaService } from './ai-quota.service';
@@ -12,7 +11,7 @@ import { resolveStudentAiLanguage } from './utils/student-ai-language';
 
 export type RecommendationsPayload = {
   weakTopics: string[];
-  repeatModuleIds: string[];
+  repeatLessonIds: string[];
   suggestedMaterials: string[];
   summary: string;
 };
@@ -44,18 +43,18 @@ export class AiRecommendationsService {
       where: { userId },
       order: { completedAt: 'DESC' },
       take: 15,
-      relations: ['quiz', 'quiz.module'],
+      relations: { quiz: { lesson: true } },
     });
 
     const progress = await this.progressRepo.find({
       where: courseId ? { userId, courseId } : { userId },
-      relations: ['module', 'course'],
+      relations: { lesson: true, course: true },
       take: 50,
     });
 
     const attemptSummary = attempts
       .map((a) => {
-        const title = a.quiz?.module?.title ?? 'модуль';
+        const title = a.quiz?.lesson?.title ?? 'урок';
         return `${title}: попытка, балл ${a.score}/${a.maxScore}, сдал: ${a.isPassed}`;
       })
       .join('\n');
@@ -63,7 +62,7 @@ export class AiRecommendationsService {
     const progressSummary = progress
       .map(
         (p) =>
-          `${p.course?.title ?? ''} / ${p.module?.title ?? ''}: ${p.status}`,
+          `${p.course?.title ?? ''} / ${p.lesson?.title ?? ''}: ${p.status}`,
       )
       .join('\n');
 
@@ -76,33 +75,33 @@ export class AiRecommendationsService {
 Тесттер тарихы:
 ${attemptSummary || 'дерек жоқ'}
 
-Модульдер прогресі:
+Сабақтар прогресі:
 ${progressSummary || 'дерек жоқ'}
 
 ТЕК JSON жауап бер (мәтіндер қазақ тілінде, қысқа):
 {
   "weakTopics": ["тема1","тема2"],
-  "repeatModuleIds": [],
+  "repeatLessonIds": [],
   "suggestedMaterials": ["не қайталау керек"],
   "summary": "дашборд үшін 2-3 қысқа сөйлем"
 }
-repeatModuleIds — қайталауға UUID модульдер, білмесең [].`
+repeatLessonIds — қайталауға UUID сабақтар, білмесең [].`
         : `На основе прогресса школьника 4–7 классов по курсам дай персональные рекомендации простым языком.
 
 История тестов:
 ${attemptSummary || 'нет данных'}
 
-Прогресс модулей:
+Прогресс уроков:
 ${progressSummary || 'нет данных'}
 
 Ответь ТОЛЬКО JSON:
 {
   "weakTopics": ["тема1","тема2"],
-  "repeatModuleIds": [],
+  "repeatLessonIds": [],
   "suggestedMaterials": ["краткая рекомендация что подучить"],
   "summary": "2-3 предложения для дашборда"
 }
-repeatModuleIds — UUID модулей для повторения, если известны из контекста, иначе [].`;
+repeatLessonIds — UUID уроков для повторения, если известны из контекста, иначе [].`;
 
     const client = this.openAi.getClient();
     const completion = await client.chat.completions.create({
@@ -116,11 +115,25 @@ repeatModuleIds — UUID модулей для повторения, если и
     const json = raw.replace(/^```json\s*|\s*```$/g, '').trim();
     let data: RecommendationsPayload;
     try {
-      data = JSON.parse(json) as RecommendationsPayload;
+      const parsed = JSON.parse(json) as Record<string, unknown>;
+      data = {
+        weakTopics: Array.isArray(parsed.weakTopics)
+          ? (parsed.weakTopics as string[])
+          : [],
+        repeatLessonIds: Array.isArray(parsed.repeatLessonIds)
+          ? (parsed.repeatLessonIds as string[])
+          : Array.isArray(parsed.repeatModuleIds)
+            ? (parsed.repeatModuleIds as string[])
+            : [],
+        suggestedMaterials: Array.isArray(parsed.suggestedMaterials)
+          ? (parsed.suggestedMaterials as string[])
+          : [],
+        summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      };
     } catch {
       data = {
         weakTopics: [],
-        repeatModuleIds: [],
+        repeatLessonIds: [],
         suggestedMaterials: [],
         summary:
           lang === 'kk'
@@ -129,8 +142,8 @@ repeatModuleIds — UUID модулей для повторения, если и
       };
     }
     data.weakTopics = Array.isArray(data.weakTopics) ? data.weakTopics : [];
-    data.repeatModuleIds = Array.isArray(data.repeatModuleIds)
-      ? data.repeatModuleIds
+    data.repeatLessonIds = Array.isArray(data.repeatLessonIds)
+      ? data.repeatLessonIds
       : [];
     data.suggestedMaterials = Array.isArray(data.suggestedMaterials)
       ? data.suggestedMaterials

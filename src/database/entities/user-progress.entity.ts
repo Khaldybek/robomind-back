@@ -11,10 +11,10 @@ import {
 import { ProgressStatus } from '../enums';
 import { User } from './user.entity';
 import { Course } from './course.entity';
-import { Module } from './module.entity';
+import { Lesson } from './lesson.entity';
 
 @Entity('user_progress')
-@Index('UQ_user_progress_user_module', ['userId', 'moduleId'], { unique: true })
+@Index('UQ_user_progress_user_lesson', ['userId', 'lessonId'], { unique: true })
 export class UserProgress {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -33,12 +33,12 @@ export class UserProgress {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @Column({ name: 'module_id', type: 'uuid' })
-  moduleId: string;
+  @Column({ name: 'lesson_id', type: 'uuid' })
+  lessonId: string;
 
-  @ManyToOne(() => Module, (m) => m.userProgress, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'module_id' })
-  module: Module;
+  @ManyToOne(() => Lesson, (l) => l.userProgress, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id' })
+  lesson: Lesson;
 
   @Column({
     type: 'enum',

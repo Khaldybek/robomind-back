@@ -7,7 +7,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from '../../database/entities/course.entity';
-import { Module } from '../../database/entities/module.entity';
 import { UserRole } from '../../database/enums';
 import type { AuthUserPayload } from '../auth/decorators/current-user.decorator';
 import {
@@ -28,7 +27,10 @@ export type AdminCourseRow = {
   updatedAt: Date;
   thumbnailUrl: string | null;
   ageGroup: string | null;
+  /** Всего уроков в курсе (по всем модулям курса) */
   moduleCount: number;
+  /** Секций курса (модулей курса) */
+  courseModuleCount: number;
   studentsCount: number;
 };
 
@@ -37,13 +39,12 @@ export class AdminCoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courses: Repository<Course>,
-    @InjectRepository(Module)
-    private readonly modules: Repository<Module>,
   ) {}
 
   private row(
     c: Course,
     moduleCount: number,
+    courseModuleCount: number,
     studentsCount: number,
   ): AdminCourseRow {
     return {
@@ -58,6 +59,7 @@ export class AdminCoursesService {
       thumbnailUrl: c.thumbnailUrl,
       ageGroup: c.ageGroup,
       moduleCount,
+      courseModuleCount,
       studentsCount,
     };
   }
@@ -65,10 +67,19 @@ export class AdminCoursesService {
   private async countsByCourseIds(
     ids: string[],
     schoolId?: string | null,
-  ): Promise<Map<string, { moduleCount: number; studentsCount: number }>> {
+  ): Promise<
+    Map<
+      string,
+      { moduleCount: number; courseModuleCount: number; studentsCount: number }
+    >
+  > {
     const map = new Map<
       string,
-      { moduleCount: number; studentsCount: number }
+      {
+        moduleCount: number;
+        courseModuleCount: number;
+        studentsCount: number;
+      }
     >();
     if (ids.length === 0) return map;
     const studentsSubq = schoolId
@@ -93,7 +104,10 @@ export class AdminCoursesService {
       `;
     const sql = `
       SELECT c.id,
-        (SELECT COUNT(*)::int FROM modules m WHERE m.course_id = c.id) AS "moduleCount",
+        (SELECT COUNT(*)::int FROM lessons l
+          INNER JOIN course_modules cm ON cm.id = l.course_module_id
+          WHERE cm.course_id = c.id) AS "moduleCount",
+        (SELECT COUNT(*)::int FROM course_modules cm WHERE cm.course_id = c.id) AS "courseModuleCount",
         ${studentsSubq} AS "studentsCount"
       FROM courses c
       WHERE c.id = ANY($1::uuid[])
@@ -102,17 +116,19 @@ export class AdminCoursesService {
     const rows: {
       id: string;
       moduleCount: string | number;
+      courseModuleCount: string | number;
       studentsCount: string | number;
     }[] = await this.courses.manager.query(sql, params);
     for (const r of rows) {
       map.set(r.id, {
         moduleCount: Number(r.moduleCount),
+        courseModuleCount: Number(r.courseModuleCount),
         studentsCount: Number(r.studentsCount),
       });
     }
     for (const id of ids) {
       if (!map.has(id)) {
-        map.set(id, { moduleCount: 0, studentsCount: 0 });
+        map.set(id, { moduleCount: 0, courseModuleCount: 0, studentsCount: 0 });
       }
     }
     return map;
@@ -177,8 +193,9 @@ export class AdminCoursesService {
     const counts = await this.countsByCourseIds(ids, schoolScope);
     return {
       items: items.map((c) => {
-        const { moduleCount, studentsCount } = counts.get(c.id)!;
-        return this.row(c, moduleCount, studentsCount);
+        const { moduleCount, courseModuleCount, studentsCount } =
+          counts.get(c.id)!;
+        return this.row(c, moduleCount, courseModuleCount, studentsCount);
       }),
       total,
       page,
@@ -196,8 +213,8 @@ export class AdminCoursesService {
     const schoolScope =
       actor.role === UserRole.SCHOOL_ADMIN ? actor.schoolId : null;
     const counts = await this.countsByCourseIds([id], schoolScope);
-    const { moduleCount, studentsCount } = counts.get(id)!;
-    return this.row(c, moduleCount, studentsCount);
+    const { moduleCount, courseModuleCount, studentsCount } = counts.get(id)!;
+    return this.row(c, moduleCount, courseModuleCount, studentsCount);
   }
 
   async createCourse(dto: CreateAdminCourseDto): Promise<AdminCourseRow> {
@@ -211,7 +228,7 @@ export class AdminCoursesService {
       ageGroup: dto.ageGroup?.trim() || null,
     });
     await this.courses.save(c);
-    return this.row(c, 0, 0);
+    return this.row(c, 0, 0, 0);
   }
 
   async patchCourse(
@@ -239,10 +256,10 @@ export class AdminCoursesService {
     const c = await this.courses.findOne({ where: { id } });
     if (!c) throw new NotFoundException('Курс не найден');
     const counts = await this.countsByCourseIds([id], null);
-    const { moduleCount, studentsCount } = counts.get(id)!;
-    if (moduleCount > 0 || studentsCount > 0) {
+    const { moduleCount, courseModuleCount, studentsCount } = counts.get(id)!;
+    if (moduleCount > 0 || courseModuleCount > 0 || studentsCount > 0) {
       throw new ConflictException(
-        'Нельзя удалить курс: есть модули или студенты (доступ/прогресс). Снимите с публикации (PATCH isPublished: false) или удалите модули и отзовите доступ.',
+        'Нельзя удалить курс: есть модули/уроки или студенты (доступ/прогресс). Снимите с публикации (PATCH isPublished: false) или удалите контент и отзовите доступ.',
       );
     }
     await this.courses.remove(c);

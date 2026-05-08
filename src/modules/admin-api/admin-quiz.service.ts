@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Module } from '../../database/entities/module.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
 import { Quiz } from '../../database/entities/quiz.entity';
 import { Question } from '../../database/entities/question.entity';
 import { Answer } from '../../database/entities/answer.entity';
@@ -24,8 +24,8 @@ import {
 @Injectable()
 export class AdminQuizService {
   constructor(
-    @InjectRepository(Module)
-    private readonly modules: Repository<Module>,
+    @InjectRepository(Lesson)
+    private readonly lessons: Repository<Lesson>,
     @InjectRepository(Quiz)
     private readonly quizzes: Repository<Quiz>,
     @InjectRepository(Question)
@@ -34,16 +34,16 @@ export class AdminQuizService {
     private readonly answers: Repository<Answer>,
   ) {}
 
-  private async assertModule(moduleId: string): Promise<Module> {
-    const m = await this.modules.findOne({ where: { id: moduleId } });
-    if (!m) throw new NotFoundException('Модуль не найден');
-    return m;
+  private async assertLesson(lessonId: string): Promise<Lesson> {
+    const l = await this.lessons.findOne({ where: { id: lessonId } });
+    if (!l) throw new NotFoundException('Урок не найден');
+    return l;
   }
 
   private quizToJson(q: Quiz, withQuestions = true) {
     const base = {
       id: q.id,
-      moduleId: q.moduleId,
+      lessonId: q.lessonId,
       title: q.title,
       passingScore: q.passingScore,
       maxAttempts: q.maxAttempts,
@@ -80,24 +80,24 @@ export class AdminQuizService {
     };
   }
 
-  async getQuizByModule(moduleId: string) {
-    await this.assertModule(moduleId);
+  async getQuizByLesson(lessonId: string) {
+    await this.assertLesson(lessonId);
     const q = await this.quizzes.findOne({
-      where: { moduleId },
+      where: { lessonId },
       relations: { questions: { answers: true } },
     });
     if (!q) return null;
     return this.quizToJson(q, true);
   }
 
-  async createQuiz(moduleId: string, dto: CreateAdminQuizDto) {
-    await this.assertModule(moduleId);
-    const exists = await this.quizzes.exist({ where: { moduleId } });
+  async createQuiz(lessonId: string, dto: CreateAdminQuizDto) {
+    await this.assertLesson(lessonId);
+    const exists = await this.quizzes.exist({ where: { lessonId } });
     if (exists) {
-      throw new ConflictException('У модуля уже есть тест');
+      throw new ConflictException('У урока уже есть тест');
     }
     const q = this.quizzes.create({
-      moduleId,
+      lessonId,
       title: dto.title.trim(),
       passingScore: dto.passingScore,
       maxAttempts: dto.maxAttempts ?? 3,
@@ -105,19 +105,15 @@ export class AdminQuizService {
       shuffleQuestions: dto.shuffleQuestions ?? false,
     });
     await this.quizzes.save(q);
-    return this.getQuizByModule(moduleId);
+    return this.getQuizByLesson(lessonId);
   }
 
-  /**
-   * Заменить вопросы теста набором из ИИ (POST /admin/ai/quiz/generate → сюда).
-   * Если теста нет — создаётся. Если есть попытки — 409.
-   */
-  async importGeneratedQuestions(moduleId: string, dto: ApplyGeneratedQuizDto) {
+  async importGeneratedQuestions(lessonId: string, dto: ApplyGeneratedQuizDto) {
     if (!dto.questions?.length) {
       throw new BadRequestException('Массив questions пуст');
     }
-    await this.assertModule(moduleId);
-    let quiz = await this.quizzes.findOne({ where: { moduleId } });
+    await this.assertLesson(lessonId);
+    let quiz = await this.quizzes.findOne({ where: { lessonId } });
     if (quiz) {
       const n = await this.quizzes.manager.query(
         `SELECT COUNT(*)::int AS n FROM quiz_attempts WHERE quiz_id = $1`,
@@ -134,7 +130,7 @@ export class AdminQuizService {
       await this.quizzes.save(quiz);
     } else {
       quiz = this.quizzes.create({
-        moduleId,
+        lessonId,
         title: dto.quizTitle?.trim() || 'Тест',
         passingScore: dto.passingScore ?? 60,
         maxAttempts: 3,
@@ -169,7 +165,7 @@ export class AdminQuizService {
         await this.answers.save(ans);
       }
     }
-    return this.getQuizByModule(moduleId);
+    return this.getQuizByLesson(lessonId);
   }
 
   async patchQuiz(quizId: string, dto: PatchAdminQuizDto) {
@@ -184,7 +180,7 @@ export class AdminQuizService {
       q.shuffleQuestions = dto.shuffleQuestions;
     }
     await this.quizzes.save(q);
-    return this.getQuizByModule(q.moduleId);
+    return this.getQuizByLesson(q.lessonId);
   }
 
   async deleteQuiz(quizId: string): Promise<void> {
@@ -226,7 +222,7 @@ export class AdminQuizService {
       });
       await this.answers.save(ans);
     }
-    return this.getQuizByModule(quiz.moduleId);
+    return this.getQuizByLesson(quiz.lessonId);
   }
 
   async patchQuestion(questionId: string, dto: PatchAdminQuestionDto) {
@@ -248,7 +244,7 @@ export class AdminQuizService {
       qu.gradingRubric = dto.gradingRubric;
     }
     await this.questions.save(qu);
-    return this.getQuizByModule(qu.quiz.moduleId);
+    return this.getQuizByLesson(qu.quiz.lessonId);
   }
 
   async deleteQuestion(questionId: string): Promise<void> {
@@ -272,7 +268,7 @@ export class AdminQuizService {
       isCorrect: dto.isCorrect,
     });
     await this.answers.save(ans);
-    return this.getQuizByModule(qu.quiz.moduleId);
+    return this.getQuizByLesson(qu.quiz.lessonId);
   }
 
   async patchAnswer(answerId: string, dto: PatchAdminAnswerDto) {
@@ -284,7 +280,7 @@ export class AdminQuizService {
     if (dto.text !== undefined) an.text = dto.text.trim();
     if (dto.isCorrect !== undefined) an.isCorrect = dto.isCorrect;
     await this.answers.save(an);
-    return this.getQuizByModule(an.question.quiz.moduleId);
+    return this.getQuizByLesson(an.question.quiz.lessonId);
   }
 
   async deleteAnswer(answerId: string): Promise<void> {

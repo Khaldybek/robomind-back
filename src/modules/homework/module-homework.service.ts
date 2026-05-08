@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, MoreThan, In, Not } from 'typeorm';
-import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
-import { ModuleHomeworkSubmission } from '../../database/entities/module-homework-submission.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
+import { LessonHomeworkSubmission } from '../../database/entities/lesson-homework-submission.entity';
 import { User } from '../../database/entities/user.entity';
 import { Course } from '../../database/entities/course.entity';
 import { CourseAccess } from '../../database/entities/course-access.entity';
@@ -23,12 +23,12 @@ import { ListHomeworkSubmissionsQueryDto } from './dto/list-homework-submissions
 @Injectable()
 export class ModuleHomeworkService {
   constructor(
-    @InjectRepository(ModuleHomeworkSubmission)
-    private readonly submissions: Repository<ModuleHomeworkSubmission>,
+    @InjectRepository(LessonHomeworkSubmission)
+    private readonly submissions: Repository<LessonHomeworkSubmission>,
     @InjectRepository(Course)
     private readonly courses: Repository<Course>,
-    @InjectRepository(CourseModuleEntity)
-    private readonly modules: Repository<CourseModuleEntity>,
+    @InjectRepository(Lesson)
+    private readonly lessons: Repository<Lesson>,
     @InjectRepository(CourseAccess)
     private readonly courseAccess: Repository<CourseAccess>,
     @InjectRepository(Quiz)
@@ -41,7 +41,7 @@ export class ModuleHomeworkService {
 
   async submitStudent(
     userId: string,
-    mod: CourseModuleEntity,
+    lesson: Lesson,
     file: Express.Multer.File | undefined,
     studentComment?: string,
   ) {
@@ -50,9 +50,10 @@ export class ModuleHomeworkService {
     }
     const meta = this.upload.homeworkFile(file);
     const comment = studentComment?.trim().slice(0, 4000) || null;
+    const courseId = lesson.courseModule.courseId;
 
     const existing = await this.submissions.findOne({
-      where: { userId, moduleId: mod.id },
+      where: { userId, lessonId: lesson.id },
     });
 
     const isFirstSubmission = !existing;
@@ -69,14 +70,13 @@ export class ModuleHomeworkService {
       existing.gradedByUserId = null;
       existing.maxPoints = existing.maxPoints ?? 100;
       await this.submissions.save(existing);
-      // При повторной сдаче XP и бейджи не начисляем (только за первую)
       return this.toStudentSubmissionJson(existing);
     }
 
     const row = this.submissions.create({
       userId,
-      moduleId: mod.id,
-      courseId: mod.courseId,
+      lessonId: lesson.id,
+      courseId,
       fileUrl: meta.url,
       originalFilename: meta.originalName,
       mimeType: meta.mimeType,
@@ -99,9 +99,9 @@ export class ModuleHomeworkService {
     return this.toStudentSubmissionJson(row);
   }
 
-  async getStudentSubmission(userId: string, moduleId: string) {
+  async getStudentSubmission(userId: string, lessonId: string) {
     const row = await this.submissions.findOne({
-      where: { userId, moduleId },
+      where: { userId, lessonId },
     });
     if (!row) {
       return { submission: null };
@@ -109,10 +109,10 @@ export class ModuleHomeworkService {
     return { submission: this.toStudentSubmissionJson(row) };
   }
 
-  private toStudentSubmissionJson(s: ModuleHomeworkSubmission) {
+  private toStudentSubmissionJson(s: LessonHomeworkSubmission) {
     return {
       id: s.id,
-      moduleId: s.moduleId,
+      lessonId: s.lessonId,
       courseId: s.courseId,
       fileUrl: s.fileUrl,
       originalFilename: s.originalFilename,
@@ -128,17 +128,20 @@ export class ModuleHomeworkService {
     };
   }
 
-  private async assertCanManageModule(
-    moduleId: string,
+  private async assertCanManageLesson(
+    lessonId: string,
     actor: AuthUserPayload,
   ): Promise<{
-    module: CourseModuleEntity;
+    lesson: Lesson;
     course: Course;
   }> {
-    const module = await this.modules.findOne({ where: { id: moduleId } });
-    if (!module) throw new NotFoundException('Модуль не найден');
+    const lesson = await this.lessons.findOne({
+      where: { id: lessonId },
+      relations: { courseModule: true },
+    });
+    if (!lesson) throw new NotFoundException('Урок не найден');
     const course = await this.courses.findOne({
-      where: { id: module.courseId },
+      where: { id: lesson.courseModule.courseId },
     });
     if (!course) throw new NotFoundException('Курс не найден');
     if (actor.role === UserRole.SCHOOL_ADMIN) {
@@ -151,7 +154,7 @@ export class ModuleHomeworkService {
         throw new NotFoundException('Курс недоступен');
       }
     }
-    return { module, course };
+    return { lesson, course };
   }
 
   private async schoolStudentsWithCourseAccess(
@@ -192,8 +195,8 @@ export class ModuleHomeworkService {
     q: ListHomeworkSubmissionsQueryDto,
     actor: AuthUserPayload,
   ) {
-    const { module, course } = await this.assertCanManageModule(
-      q.moduleId,
+    const { lesson, course } = await this.assertCanManageLesson(
+      q.lessonId,
       actor,
     );
 
@@ -215,7 +218,7 @@ export class ModuleHomeworkService {
     const qb = this.submissions
       .createQueryBuilder('h')
       .innerJoinAndSelect('h.user', 'u')
-      .where('h.module_id = :mid', { mid: module.id })
+      .where('h.lesson_id = :lid', { lid: lesson.id })
       .andWhere('u.school_id = :sid', { sid: schoolId })
       .andWhere('u.role = :r', { r: UserRole.STUDENT });
 
@@ -236,9 +239,9 @@ export class ModuleHomeworkService {
       .getMany();
 
     return {
-      module: {
-        id: module.id,
-        title: module.title,
+      lesson: {
+        id: lesson.id,
+        title: lesson.title,
         courseId: course.id,
         courseTitle: course.title,
       },
@@ -279,7 +282,7 @@ export class ModuleHomeworkService {
   ) {
     const h = await this.submissions.findOne({
       where: { id: submissionId },
-      relations: { user: true, module: true },
+      relations: { user: true, lesson: true },
     });
     if (!h) throw new NotFoundException('Сдача не найдена');
 
@@ -310,7 +313,6 @@ export class ModuleHomeworkService {
     const gradePercent =
       maxPoints > 0 ? Math.round((dto.points / maxPoints) * 100) : 0;
 
-    // Fire-and-forget: начислить бонусный XP если оценка ≥ 80%
     void this.gamification
       .processEvent(h.userId, {
         type: 'homework_graded',
@@ -320,7 +322,7 @@ export class ModuleHomeworkService {
 
     return {
       id: h.id,
-      moduleId: h.moduleId,
+      lessonId: h.lessonId,
       userId: h.userId,
       maxPoints: h.maxPoints,
       points: h.points,
@@ -331,16 +333,13 @@ export class ModuleHomeworkService {
     };
   }
 
-  /**
-   * Журнал по модулю: ученики школы с доступом к курсу + тест + домашка.
-   */
-  async getModuleGradeOverview(
-    moduleId: string,
+  async getLessonGradeOverview(
+    lessonId: string,
     actor: AuthUserPayload,
     schoolIdQuery?: string,
   ) {
-    const { module, course } = await this.assertCanManageModule(
-      moduleId,
+    const { lesson, course } = await this.assertCanManageLesson(
+      lessonId,
       actor,
     );
 
@@ -354,7 +353,7 @@ export class ModuleHomeworkService {
       }
     }
 
-    const quiz = await this.quizzes.findOne({ where: { moduleId: module.id } });
+    const quiz = await this.quizzes.findOne({ where: { lessonId: lesson.id } });
 
     const students = await this.schoolStudentsWithCourseAccess(
       course.id,
@@ -364,9 +363,9 @@ export class ModuleHomeworkService {
     const userIds = students.map((s) => s.id);
     if (userIds.length === 0) {
       return {
-        module: {
-          id: module.id,
-          title: module.title,
+        lesson: {
+          id: lesson.id,
+          title: lesson.title,
           courseId: course.id,
           courseTitle: course.title,
         },
@@ -380,10 +379,10 @@ export class ModuleHomeworkService {
     const homeworkRows =
       userIds.length > 0
         ? await this.submissions.find({
-            where: { moduleId: module.id, userId: In(userIds) },
+            where: { lessonId: lesson.id, userId: In(userIds) },
           })
         : [];
-    const hwByUser = new Map(homeworkRows.map((h) => [h.userId, h]));
+    const hwByUser = new Map(homeworkRows.map((row) => [row.userId, row]));
 
     let attempts: QuizAttempt[] = [];
     if (quiz && userIds.length) {
@@ -444,9 +443,9 @@ export class ModuleHomeworkService {
     });
 
     return {
-      module: {
-        id: module.id,
-        title: module.title,
+      lesson: {
+        id: lesson.id,
+        title: lesson.title,
         courseId: course.id,
         courseTitle: course.title,
       },

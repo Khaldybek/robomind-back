@@ -21,7 +21,7 @@ export class AiChatMessageDto {
 
 export class AiChatDto {
   @IsUUID()
-  moduleId: string;
+  lessonId: string;
 
   /**
    * Язык ответа ассистента: `kk` — қазақша (4–7 сынып, қарапайым сөздер),
@@ -49,7 +49,7 @@ export class AiProfileChatDto {
   messages: AiChatMessageDto[];
 }
 
-/** Чат по всему курсу (контекст всех опубликованных модулей курса) */
+/** Чат по всему курсу (контекст всех опубликованных секций и уроков) */
 export class AiCourseChatDto {
   @IsUUID()
   courseId: string;

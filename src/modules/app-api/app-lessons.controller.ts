@@ -6,62 +6,61 @@ import {
   Param,
   Body,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
   UseGuards,
   UseInterceptors,
   UploadedFile,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { AppStudentService } from './app-student.service';
-import { ModuleHomeworkService } from '../homework/module-homework.service';
+import { UserRole } from '../../database/enums';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '../../database/enums';
+import { AppStudentService } from './app-student.service';
+import { ModuleHomeworkService } from '../homework/module-homework.service';
 import { PatchModuleProgressDto } from './dto/patch-module-progress.dto';
 
 const HOMEWORK_MAX_BYTES =
   (Number(process.env.UPLOAD_MAX_FILE_MB) || 100) * 1024 * 1024;
 
-@Controller('app/modules')
+@Controller('app/lessons')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.STUDENT)
-export class AppModulesController {
+export class AppLessonsController {
   constructor(
     private readonly app: AppStudentService,
     private readonly homework: ModuleHomeworkService,
   ) {}
 
-  @Get(':moduleId/content')
-  moduleContent(
+  @Get(':lessonId/content')
+  lessonContent(
     @CurrentUser('id') userId: string,
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
   ) {
-    return this.app.getModuleContent(userId, moduleId);
+    return this.app.getLessonContent(userId, lessonId);
   }
 
-  @Get(':moduleId/quiz')
-  moduleQuiz(
+  @Get(':lessonId/quiz')
+  lessonQuiz(
     @CurrentUser('id') userId: string,
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
   ) {
-    return this.app.getModuleQuiz(userId, moduleId);
+    return this.app.getLessonQuiz(userId, lessonId);
   }
 
-  @Patch(':moduleId/progress')
-  patchModuleProgress(
+  @Patch(':lessonId/progress')
+  patchLessonProgress(
     @CurrentUser('id') userId: string,
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() body: PatchModuleProgressDto,
   ) {
-    return this.app.upsertModuleProgress(userId, moduleId, body);
+    return this.app.upsertLessonProgress(userId, lessonId, body);
   }
 
-  /** Сдача домашнего задания (файл); повторная загрузка заменяет файл и сбрасывает оценку. */
-  @Post(':moduleId/homework')
+  @Post(':lessonId/homework')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -71,20 +70,20 @@ export class AppModulesController {
   )
   async submitHomework(
     @CurrentUser('id') userId: string,
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body('comment') comment?: string,
   ) {
-    const mod = await this.app.assertModuleAccessible(userId, moduleId);
-    return this.homework.submitStudent(userId, mod, file, comment);
+    const lesson = await this.app.assertLessonAccessible(userId, lessonId);
+    return this.homework.submitStudent(userId, lesson, file, comment);
   }
 
-  @Get(':moduleId/homework')
+  @Get(':lessonId/homework')
   async getHomework(
     @CurrentUser('id') userId: string,
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
   ) {
-    await this.app.assertModuleAccessible(userId, moduleId);
-    return this.homework.getStudentSubmission(userId, moduleId);
+    await this.app.assertLessonAccessible(userId, lessonId);
+    return this.homework.getStudentSubmission(userId, lessonId);
   }
 }

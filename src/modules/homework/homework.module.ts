@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ModuleHomeworkSubmission } from '../../database/entities/module-homework-submission.entity';
+import { LessonHomeworkSubmission } from '../../database/entities/lesson-homework-submission.entity';
 import { Course } from '../../database/entities/course.entity';
-import { Module as CourseModuleEntity } from '../../database/entities/module.entity';
+import { Lesson } from '../../database/entities/lesson.entity';
 import { CourseAccess } from '../../database/entities/course-access.entity';
 import { Quiz } from '../../database/entities/quiz.entity';
 import { QuizAttempt } from '../../database/entities/quiz-attempt.entity';
@@ -16,9 +16,9 @@ import { AdminHomeworkController } from './admin-homework.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      ModuleHomeworkSubmission,
+      LessonHomeworkSubmission,
       Course,
-      CourseModuleEntity,
+      Lesson,
       CourseAccess,
       Quiz,
       QuizAttempt,

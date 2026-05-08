@@ -32,27 +32,27 @@ import {
 export class AdminQuizController {
   constructor(private readonly quiz: AdminQuizService) {}
 
-  @Get('modules/:moduleId/quiz')
-  getByModule(@Param('moduleId', ParseUUIDPipe) moduleId: string) {
-    return this.quiz.getQuizByModule(moduleId);
+  @Get('lessons/:lessonId/quiz')
+  getByLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
+    return this.quiz.getQuizByLesson(lessonId);
   }
 
   /** Импорт вопросов из ИИ (тело как ответ POST /admin/ai/quiz/generate) */
-  @Post('modules/:moduleId/quiz/import-generated')
+  @Post('lessons/:lessonId/quiz/import-generated')
   importGenerated(
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: ApplyGeneratedQuizDto,
   ) {
-    return this.quiz.importGeneratedQuestions(moduleId, dto);
+    return this.quiz.importGeneratedQuestions(lessonId, dto);
   }
 
-  @Post('modules/:moduleId/quiz')
+  @Post('lessons/:lessonId/quiz')
   @HttpCode(HttpStatus.CREATED)
   create(
-    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: CreateAdminQuizDto,
   ) {
-    return this.quiz.createQuiz(moduleId, dto);
+    return this.quiz.createQuiz(lessonId, dto);
   }
 
   @Post('quizzes/:quizId/questions')

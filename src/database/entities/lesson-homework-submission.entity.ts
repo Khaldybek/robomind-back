@@ -9,10 +9,10 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { Course } from './course.entity';
-import { Module } from './module.entity';
+import { Lesson } from './lesson.entity';
 
-@Entity('module_homework_submissions')
-export class ModuleHomeworkSubmission {
+@Entity('lesson_homework_submissions')
+export class LessonHomeworkSubmission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -23,12 +23,12 @@ export class ModuleHomeworkSubmission {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'module_id', type: 'uuid' })
-  moduleId: string;
+  @Column({ name: 'lesson_id', type: 'uuid' })
+  lessonId: string;
 
-  @ManyToOne(() => Module, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'module_id' })
-  module: Module;
+  @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id' })
+  lesson: Lesson;
 
   @Column({ name: 'course_id', type: 'uuid' })
   courseId: string;
@@ -52,11 +52,9 @@ export class ModuleHomeworkSubmission {
   @Column({ name: 'student_comment', type: 'text', nullable: true })
   studentComment: string | null;
 
-  /** Максимум баллов за работу (по умолчанию 100; можно менять при оценке) */
   @Column({ name: 'max_points', type: 'int', default: 100 })
   maxPoints: number;
 
-  /** Выставленные баллы; null — ещё не оценено */
   @Column({ type: 'int', nullable: true })
   points: number | null;
 
