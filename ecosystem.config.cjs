@@ -1,7 +1,7 @@
 /**
  * PM2: продакшен Nest (собранный `dist/main.js`).
  * Запуск: npm run build && npm run pm2:start
- * Порт по умолчанию 3012 — переопредели через env или `.env` (PORT=...).
+ * Порт по умолчанию 3013 — переопредели через env или `.env` (PORT=...).
  */
 module.exports = {
   apps: [
@@ -17,7 +17,7 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: 'production',
-        PORT: '3012',
+        PORT: '3013',
       },
     },
   ],
