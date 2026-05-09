@@ -15,6 +15,8 @@ import { UserRole } from '../../database/enums';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUserPayload } from '../auth/decorators/current-user.decorator';
 import { AdminQuizService } from './admin-quiz.service';
 import {
   ApplyGeneratedQuizDto,
@@ -33,8 +35,17 @@ export class AdminQuizController {
   constructor(private readonly quiz: AdminQuizService) {}
 
   @Get('lessons/:lessonId/quiz')
-  getByLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
-    return this.quiz.getQuizByLesson(lessonId);
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  getByLesson(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.quiz.getQuizByLesson(
+      lessonId,
+      user.role === UserRole.SCHOOL_ADMIN
+        ? { schoolAdminReadOnly: true }
+        : undefined,
+    );
   }
 
   /** Импорт вопросов из ИИ (тело как ответ POST /admin/ai/quiz/generate) */

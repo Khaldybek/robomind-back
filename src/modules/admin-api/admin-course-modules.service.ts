@@ -163,9 +163,20 @@ export class AdminCourseModulesService {
     };
   }
 
-  async getOne(id: string): Promise<AdminCourseModuleRow> {
-    const cm = await this.courseModules.findOne({ where: { id } });
+  async getOne(
+    id: string,
+    opts?: { schoolAdminReadOnly?: boolean },
+  ): Promise<AdminCourseModuleRow> {
+    const cm = await this.courseModules.findOne({
+      where: { id },
+      relations: { course: true },
+    });
     if (!cm) throw new NotFoundException('Модуль курса не найден');
+    if (opts?.schoolAdminReadOnly) {
+      if (!cm.course?.isPublished || !cm.isPublished) {
+        throw new NotFoundException('Модуль курса не найден');
+      }
+    }
     const counts = await this.lessonCounts([id]);
     return this.row(cm, counts.get(id)!);
   }

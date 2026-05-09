@@ -225,10 +225,15 @@ export class AdminLessonsService {
     q: ListAdminLessonsQueryDto,
     opts?: { schoolAdminReadOnly?: boolean },
   ) {
-    const cm = await this.courseModules.findOne({ where: { id: q.courseModuleId } });
+    const cm = await this.courseModules.findOne({
+      where: { id: q.courseModuleId },
+      relations: { course: true },
+    });
     if (!cm) throw new NotFoundException('Модуль курса не найден');
-    if (opts?.schoolAdminReadOnly && !cm.isPublished) {
-      throw new NotFoundException('Модуль курса не найден');
+    if (opts?.schoolAdminReadOnly) {
+      if (!cm.course?.isPublished || !cm.isPublished) {
+        throw new NotFoundException('Модуль курса не найден');
+      }
     }
     const page = q.page ?? 1;
     const limit = q.limit ?? 20;
@@ -270,8 +275,13 @@ export class AdminLessonsService {
     };
   }
 
-  async getLesson(id: string): Promise<AdminLessonRow> {
-    const l = await this.lessons.findOne({ where: { id } });
+  async getLesson(
+    id: string,
+    opts?: { schoolAdminReadOnly?: boolean },
+  ): Promise<AdminLessonRow> {
+    const l = opts?.schoolAdminReadOnly
+      ? await this.assertSchoolAdminCanReadLesson(id)
+      : await this.lessons.findOne({ where: { id } });
     if (!l) throw new NotFoundException('Урок не найден');
     const counts = await this.lessonCounts([id]);
     const c = counts.get(id)!;
@@ -342,8 +352,29 @@ export class AdminLessonsService {
     return l;
   }
 
-  async listContents(lessonId: string): Promise<AdminLessonContentRow[]> {
-    await this.assertLesson(lessonId);
+  /** Школьный админ видит только опубликованный курс + секцию + урок (как у студента по смыслу). */
+  private async assertSchoolAdminCanReadLesson(lessonId: string): Promise<Lesson> {
+    const l = await this.lessons.findOne({
+      where: { id: lessonId },
+      relations: { courseModule: { course: true } },
+    });
+    if (!l) throw new NotFoundException('Урок не найден');
+    const c = l.courseModule?.course;
+    if (!c?.isPublished || !l.courseModule.isPublished || !l.isPublished) {
+      throw new NotFoundException('Урок не найден');
+    }
+    return l;
+  }
+
+  async listContents(
+    lessonId: string,
+    opts?: { schoolAdminReadOnly?: boolean },
+  ): Promise<AdminLessonContentRow[]> {
+    if (opts?.schoolAdminReadOnly) {
+      await this.assertSchoolAdminCanReadLesson(lessonId);
+    } else {
+      await this.assertLesson(lessonId);
+    }
     const list = await this.contents.find({
       where: { lessonId },
       order: { order: 'ASC', id: 'ASC' },

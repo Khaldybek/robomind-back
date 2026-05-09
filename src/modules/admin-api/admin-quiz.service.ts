@@ -40,6 +40,19 @@ export class AdminQuizService {
     return l;
   }
 
+  /** Для school_admin: только опубликованный курс + секция + урок. */
+  private async assertSchoolAdminCanReadLesson(lessonId: string): Promise<void> {
+    const l = await this.lessons.findOne({
+      where: { id: lessonId },
+      relations: { courseModule: { course: true } },
+    });
+    if (!l) throw new NotFoundException('Урок не найден');
+    const c = l.courseModule?.course;
+    if (!c?.isPublished || !l.courseModule.isPublished || !l.isPublished) {
+      throw new NotFoundException('Урок не найден');
+    }
+  }
+
   private quizToJson(q: Quiz, withQuestions = true) {
     const base = {
       id: q.id,
@@ -80,8 +93,15 @@ export class AdminQuizService {
     };
   }
 
-  async getQuizByLesson(lessonId: string) {
-    await this.assertLesson(lessonId);
+  async getQuizByLesson(
+    lessonId: string,
+    opts?: { schoolAdminReadOnly?: boolean },
+  ) {
+    if (opts?.schoolAdminReadOnly) {
+      await this.assertSchoolAdminCanReadLesson(lessonId);
+    } else {
+      await this.assertLesson(lessonId);
+    }
     const q = await this.quizzes.findOne({
       where: { lessonId },
       relations: { questions: { answers: true } },

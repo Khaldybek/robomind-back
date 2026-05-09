@@ -21,6 +21,8 @@ import { UserRole } from '../../database/enums';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUserPayload } from '../auth/decorators/current-user.decorator';
 import { AdminLessonsService } from './admin-lessons.service';
 import {
   CreateAdminLessonDto,
@@ -41,28 +43,42 @@ const maxBytesContentUpload =
 
 @Controller('admin/lessons')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SUPER_ADMIN)
+@Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
 export class AdminLessonsController {
   constructor(private readonly lessons: AdminLessonsService) {}
 
+  private schoolRead(user: AuthUserPayload) {
+    return user.role === UserRole.SCHOOL_ADMIN
+      ? { schoolAdminReadOnly: true as const }
+      : undefined;
+  }
+
   @Get()
-  list(@Query() q: ListAdminLessonsQueryDto) {
-    return this.lessons.listLessons(q);
+  list(
+    @Query() q: ListAdminLessonsQueryDto,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.lessons.listLessons(q, this.schoolRead(user));
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.SUPER_ADMIN)
   create(@Body() dto: CreateAdminLessonDto) {
     return this.lessons.createLesson(dto);
   }
 
   @Get(':lessonId/contents')
-  listContents(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
-    return this.lessons.listContents(lessonId);
+  listContents(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.lessons.listContents(lessonId, this.schoolRead(user));
   }
 
   @Post(':lessonId/contents/from-file')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.SUPER_ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -86,6 +102,7 @@ export class AdminLessonsController {
 
   @Post(':lessonId/contents')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.SUPER_ADMIN)
   createContent(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: CreateModuleContentDto,
@@ -95,6 +112,7 @@ export class AdminLessonsController {
 
   @Post(':lessonId/content')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.SUPER_ADMIN)
   createContentAlias(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: CreateModuleContentDto,
@@ -103,6 +121,7 @@ export class AdminLessonsController {
   }
 
   @Patch(':lessonId/contents/:contentId')
+  @Roles(UserRole.SUPER_ADMIN)
   patchContent(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Param('contentId', ParseUUIDPipe) contentId: string,
@@ -113,6 +132,7 @@ export class AdminLessonsController {
 
   @Delete(':lessonId/contents/:contentId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.SUPER_ADMIN)
   async deleteContent(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Param('contentId', ParseUUIDPipe) contentId: string,
@@ -121,11 +141,15 @@ export class AdminLessonsController {
   }
 
   @Get(':lessonId')
-  getOne(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
-    return this.lessons.getLesson(lessonId);
+  getOne(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.lessons.getLesson(lessonId, this.schoolRead(user));
   }
 
   @Patch(':lessonId')
+  @Roles(UserRole.SUPER_ADMIN)
   patch(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Body() dto: PatchAdminLessonDto,
@@ -135,6 +159,7 @@ export class AdminLessonsController {
 
   @Delete(':lessonId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.SUPER_ADMIN)
   async remove(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
     await this.lessons.deleteLesson(lessonId);
   }
