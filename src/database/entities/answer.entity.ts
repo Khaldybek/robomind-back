@@ -24,6 +24,9 @@ export class Answer {
   @Column({ type: 'varchar', length: 2048 })
   text: string;
 
+  @Column({ name: 'text_kz', type: 'varchar', length: 2048, nullable: true })
+  textKz: string | null;
+
   @Column({ name: 'is_correct', type: 'boolean', default: false })
   isCorrect: boolean;
 

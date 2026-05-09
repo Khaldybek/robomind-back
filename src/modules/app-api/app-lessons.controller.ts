@@ -5,6 +5,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
@@ -22,6 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AppStudentService } from './app-student.service';
 import { ModuleHomeworkService } from '../homework/module-homework.service';
 import { PatchModuleProgressDto } from './dto/patch-module-progress.dto';
+import { parseQuizLang } from '../quiz/quiz-locale.util';
 
 const HOMEWORK_MAX_BYTES =
   (Number(process.env.UPLOAD_MAX_FILE_MB) || 100) * 1024 * 1024;
@@ -47,8 +49,9 @@ export class AppLessonsController {
   lessonQuiz(
     @CurrentUser('id') userId: string,
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Query('lang') lang?: string,
   ) {
-    return this.app.getLessonQuiz(userId, lessonId);
+    return this.app.getLessonQuiz(userId, lessonId, parseQuizLang(lang));
   }
 
   @Patch(':lessonId/progress')

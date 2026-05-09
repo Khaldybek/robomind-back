@@ -58,6 +58,7 @@ export class AdminQuizService {
       id: q.id,
       lessonId: q.lessonId,
       title: q.title,
+      titleKz: q.titleKz,
       passingScore: q.passingScore,
       maxAttempts: q.maxAttempts,
       timeLimitMinutes: q.timeLimitMinutes,
@@ -73,11 +74,14 @@ export class AdminQuizService {
         .map((qu) => ({
           id: qu.id,
           text: qu.text,
+          textKz: qu.textKz,
           type: qu.type,
           order: qu.order,
           imageUrl: qu.imageUrl,
           referenceAnswer: qu.referenceAnswer,
+          referenceAnswerKz: qu.referenceAnswerKz,
           gradingRubric: qu.gradingRubric,
+          gradingRubricKz: qu.gradingRubricKz,
           createdAt: qu.createdAt,
           updatedAt: qu.updatedAt,
           answers: (qu.answers || [])
@@ -85,6 +89,7 @@ export class AdminQuizService {
             .map((an) => ({
               id: an.id,
               text: an.text,
+              textKz: an.textKz,
               isCorrect: an.isCorrect,
               createdAt: an.createdAt,
               updatedAt: an.updatedAt,
@@ -119,6 +124,7 @@ export class AdminQuizService {
     const q = this.quizzes.create({
       lessonId,
       title: dto.title.trim(),
+      titleKz: dto.titleKz?.trim() || null,
       passingScore: dto.passingScore,
       maxAttempts: dto.maxAttempts ?? 3,
       timeLimitMinutes: dto.timeLimitMinutes ?? null,
@@ -146,12 +152,16 @@ export class AdminQuizService {
       }
       await this.questions.delete({ quizId: quiz.id });
       if (dto.quizTitle !== undefined) quiz.title = dto.quizTitle.trim();
+      if (dto.quizTitleKz !== undefined) {
+        quiz.titleKz = dto.quizTitleKz?.trim() || null;
+      }
       if (dto.passingScore !== undefined) quiz.passingScore = dto.passingScore;
       await this.quizzes.save(quiz);
     } else {
       quiz = this.quizzes.create({
         lessonId,
         title: dto.quizTitle?.trim() || 'Тест',
+        titleKz: dto.quizTitleKz?.trim() || null,
         passingScore: dto.passingScore ?? 60,
         maxAttempts: 3,
         timeLimitMinutes: null,
@@ -169,17 +179,21 @@ export class AdminQuizService {
       const qu = this.questions.create({
         quizId: quiz.id,
         text: q.text.trim(),
+        textKz: q.textKz?.trim() || null,
         type: qt,
         order: order++,
         imageUrl: null,
         referenceAnswer: null,
+        referenceAnswerKz: null,
         gradingRubric: null,
+        gradingRubricKz: null,
       });
       await this.questions.save(qu);
       for (const a of q.answers) {
         const ans = this.answers.create({
           questionId: qu.id,
           text: a.text.trim(),
+          textKz: a.textKz?.trim() || null,
           isCorrect: a.isCorrect,
         });
         await this.answers.save(ans);
@@ -192,6 +206,9 @@ export class AdminQuizService {
     const q = await this.quizzes.findOne({ where: { id: quizId } });
     if (!q) throw new NotFoundException('Тест не найден');
     if (dto.title !== undefined) q.title = dto.title.trim();
+    if (dto.titleKz !== undefined) {
+      q.titleKz = dto.titleKz === null ? null : dto.titleKz.trim() || null;
+    }
     if (dto.passingScore !== undefined) q.passingScore = dto.passingScore;
     if (dto.maxAttempts !== undefined) q.maxAttempts = dto.maxAttempts;
     if (dto.timeLimitMinutes !== undefined)
@@ -227,17 +244,21 @@ export class AdminQuizService {
     const qu = this.questions.create({
       quizId,
       text: dto.text.trim(),
+      textKz: dto.textKz?.trim() || null,
       type: dto.type,
       order: dto.order ?? 0,
       imageUrl: dto.imageUrl?.trim() ?? null,
       referenceAnswer: dto.referenceAnswer ?? null,
+      referenceAnswerKz: dto.referenceAnswerKz ?? null,
       gradingRubric: dto.gradingRubric ?? null,
+      gradingRubricKz: dto.gradingRubricKz ?? null,
     });
     await this.questions.save(qu);
     for (const a of dto.answers) {
       const ans = this.answers.create({
         questionId: qu.id,
         text: a.text.trim(),
+        textKz: a.textKz?.trim() || null,
         isCorrect: a.isCorrect,
       });
       await this.answers.save(ans);
@@ -252,6 +273,9 @@ export class AdminQuizService {
     });
     if (!qu) throw new NotFoundException('Вопрос не найден');
     if (dto.text !== undefined) qu.text = dto.text.trim();
+    if (dto.textKz !== undefined) {
+      qu.textKz = dto.textKz === null ? null : dto.textKz.trim() || null;
+    }
     if (dto.type !== undefined) qu.type = dto.type;
     if (dto.order !== undefined) qu.order = dto.order;
     if (dto.imageUrl !== undefined) {
@@ -260,8 +284,14 @@ export class AdminQuizService {
     if (dto.referenceAnswer !== undefined) {
       qu.referenceAnswer = dto.referenceAnswer;
     }
+    if (dto.referenceAnswerKz !== undefined) {
+      qu.referenceAnswerKz = dto.referenceAnswerKz;
+    }
     if (dto.gradingRubric !== undefined) {
       qu.gradingRubric = dto.gradingRubric;
+    }
+    if (dto.gradingRubricKz !== undefined) {
+      qu.gradingRubricKz = dto.gradingRubricKz;
     }
     await this.questions.save(qu);
     return this.getQuizByLesson(qu.quiz.lessonId);
@@ -285,6 +315,7 @@ export class AdminQuizService {
     const ans = this.answers.create({
       questionId,
       text: dto.text.trim(),
+      textKz: dto.textKz?.trim() || null,
       isCorrect: dto.isCorrect,
     });
     await this.answers.save(ans);
@@ -298,6 +329,9 @@ export class AdminQuizService {
     });
     if (!an) throw new NotFoundException('Ответ не найден');
     if (dto.text !== undefined) an.text = dto.text.trim();
+    if (dto.textKz !== undefined) {
+      an.textKz = dto.textKz === null ? null : dto.textKz.trim() || null;
+    }
     if (dto.isCorrect !== undefined) an.isCorrect = dto.isCorrect;
     await this.answers.save(an);
     return this.getQuizByLesson(an.question.quiz.lessonId);

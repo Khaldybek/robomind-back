@@ -31,6 +31,11 @@ import {
   QuizAttemptLimitService,
   type EffectiveQuizMaxAttempts,
 } from '../quiz/quiz-attempt-limit.service';
+import {
+  pickLocalized,
+  textAnswerMatchesReferences,
+  type QuizDisplayLang,
+} from '../quiz/quiz-locale.util';
 
 @Injectable()
 export class AppStudentService {
@@ -632,7 +637,11 @@ export class AppStudentService {
     return a;
   }
 
-  private quizToStudentJson(q: Quiz, effective?: EffectiveQuizMaxAttempts) {
+  private quizToStudentJson(
+    q: Quiz,
+    effective: EffectiveQuizMaxAttempts | undefined,
+    lang: QuizDisplayLang,
+  ) {
     let qs = [...(q.questions || [])].sort(
       (a, b) => a.order - b.order || a.id.localeCompare(b.id),
     );
@@ -642,7 +651,8 @@ export class AppStudentService {
     return {
       id: q.id,
       lessonId: q.lessonId,
-      title: q.title,
+      title: pickLocalized(q.title, q.titleKz, lang),
+      language: lang,
       passingScore: q.passingScore,
       maxAttempts,
       ...(maxAttemptsSource != null ? { maxAttemptsSource } : {}),
@@ -652,7 +662,7 @@ export class AppStudentService {
       updatedAt: q.updatedAt,
       questions: qs.map((qu) => ({
         id: qu.id,
-        text: qu.text,
+        text: pickLocalized(qu.text, qu.textKz, lang),
         type: qu.type,
         order: qu.order,
         imageUrl: qu.imageUrl,
@@ -660,7 +670,7 @@ export class AppStudentService {
           .sort((a, b) => a.id.localeCompare(b.id))
           .map((an) => ({
             id: an.id,
-            text: an.text,
+            text: pickLocalized(an.text, an.textKz, lang),
             createdAt: an.createdAt,
             updatedAt: an.updatedAt,
           })),
@@ -668,7 +678,11 @@ export class AppStudentService {
     };
   }
 
-  async getLessonQuiz(userId: string, lessonId: string) {
+  async getLessonQuiz(
+    userId: string,
+    lessonId: string,
+    lang: QuizDisplayLang = 'ru',
+  ) {
     await this.assertLessonAccessible(userId, lessonId);
     const q = await this.quizzes.findOne({
       where: { lessonId },
@@ -679,7 +693,7 @@ export class AppStudentService {
       userId,
       q.id,
     );
-    return this.quizToStudentJson(q, effective);
+    return this.quizToStudentJson(q, effective, lang);
   }
 
   async startQuizAttempt(userId: string, quizId: string) {
@@ -739,10 +753,11 @@ export class AppStudentService {
 
   private gradeQuestion(q: Question, ansRows: Answer[], raw: unknown): boolean {
     if (q.type === QuestionType.TEXT) {
-      const text = typeof raw === 'string' ? raw.trim() : '';
-      const ref = (q.referenceAnswer ?? '').trim();
-      if (!ref) return false;
-      return text.toLowerCase() === ref.toLowerCase();
+      return textAnswerMatchesReferences(
+        raw,
+        q.referenceAnswer,
+        q.referenceAnswerKz,
+      );
     }
     if (q.type === QuestionType.SINGLE) {
       const id = typeof raw === 'string' ? raw : '';

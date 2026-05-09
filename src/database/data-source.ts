@@ -41,6 +41,7 @@ import { ModuleHomeworkSubmissions1742700000000 } from './migrations/17427000000
 import { GamificationExpand1742800000000 } from './migrations/1742800000000-GamificationExpand';
 import { CourseModulesAndLessons1742900000000 } from './migrations/1742900000000-CourseModulesAndLessons';
 import { QuizAttemptLimits1743000000000 } from './migrations/1743000000000-QuizAttemptLimits';
+import { QuizKazakhTranslations1743100000000 } from './migrations/1743100000000-QuizKazakhTranslations';
 
 config({ path: join(__dirname, '../../.env') });
 
@@ -86,6 +87,7 @@ export default new DataSource({
     GamificationExpand1742800000000,
     CourseModulesAndLessons1742900000000,
     QuizAttemptLimits1743000000000,
+    QuizKazakhTranslations1743100000000,
   ],
   synchronize: false,
   logging: process.env.TYPEORM_LOGGING === 'true',

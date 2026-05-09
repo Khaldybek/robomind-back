@@ -43,7 +43,7 @@
 | GET | `/app/courses/:courseId/modules` | — | `course` (id, title, thumbnailUrl) + **`modules[]`** — **секции курса** (модули курса), не уроки |
 | GET | `/app/course-modules/:courseModuleId/lessons` | — | список **уроков** в секции (`lessons[]`, порядок, `unlockAfterLessonId`) |
 | GET | `/app/lessons/:lessonId/content` | — | блоки контента урока |
-| GET | `/app/lessons/:lessonId/quiz` | — | тест (вопросы с `answers`, без правильных) |
+| GET | `/app/lessons/:lessonId/quiz` | опц. query `lang=ru`\|`kk` (по умолчанию `ru`) | тест: `title` / `text` / `answers[].text` на выбранном языке (KK при отсутствии перевода — RU по полю), поле `language` в ответе |
 | PATCH | `/app/lessons/:lessonId/progress` | опц. `watchedSeconds`, `status`, `completed` | запись прогресса по уроку |
 | POST | `/app/lessons/:lessonId/homework` | `multipart/form-data`: `file`, опц. `comment` | сдача ДЗ (повтор — замена файла, сброс оценки) |
 | GET | `/app/lessons/:lessonId/homework` | — | текущая сдача и оценка или `{ submission: null }` |
@@ -390,8 +390,14 @@
 
 ### `GET /app/lessons/:lessonId/quiz`
 
-**Ответ `200`:** объект квиза: `id`, **`lessonId`**, `title`, `passingScore`, **`maxAttempts`** (эффективный лимит для текущего ученика), опционально **`maxAttemptsSource`** (`user_quiz` \| `course_access` \| `course_default` \| `quiz`), `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`. Подробнее о приоритете лимитов: `docs/API-QUIZ-ATTEMPT-LIMITS.txt`.  
+**Query:** опционально **`lang`** — `ru` или `kk` (регистр не важен). Иное значение → `400`. Без параметра используется **`ru`**.
+
+Переводы задаются в админке (поля `*Kz` в API теста). При `lang=kk` для каждого поля, если казахский текст пустой, подставляется русский.
+
+**Ответ `200`:** объект квиза: `id`, **`lessonId`**, **`language`** (`ru` \| `kk` — запрошенный `lang`), `title`, `passingScore`, **`maxAttempts`** (эффективный лимит), опционально **`maxAttemptsSource`**, `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`. Лимиты: `docs/API-QUIZ-ATTEMPT-LIMITS.txt`.  
 У каждого вопроса: `id`, `text`, `type` (`single` \| `multiple` \| `text`), `order`, `imageUrl`, **`answers`**: `[{ "id", "text", "createdAt", "updatedAt" }]` — **без** признака правильности.
+
+**Сдача (`POST …/submit`):** для вопросов типа `text` ответ считается верным, если он совпадает (без учёта регистра) с русским **или** с казахским эталоном, если тот задан в админке.
 
 *(у `text` вопросов список `answers` может быть пустым)*
 

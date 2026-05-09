@@ -46,6 +46,12 @@ export class CreateAdminQuizDto {
   @IsOptional()
   @IsBoolean()
   shuffleQuestions?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @MaxLength(512)
+  titleKz?: string | null;
 }
 
 export class PatchAdminQuizDto {
@@ -78,6 +84,12 @@ export class PatchAdminQuizDto {
   @IsOptional()
   @IsBoolean()
   shuffleQuestions?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  @MaxLength(512)
+  titleKz?: string | null;
 }
 
 export class AnswerInputDto {
@@ -88,6 +100,12 @@ export class AnswerInputDto {
 
   @IsBoolean()
   isCorrect: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @MaxLength(2048)
+  textKz?: string | null;
 }
 
 export class CreateAdminQuestionDto {
@@ -119,6 +137,21 @@ export class CreateAdminQuestionDto {
   @ValidateIf((_, v) => v != null)
   @IsString()
   gradingRubric?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  textKz?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  referenceAnswerKz?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  gradingRubricKz?: string | null;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -155,6 +188,21 @@ export class PatchAdminQuestionDto {
   @ValidateIf((_, v) => v != null)
   @IsString()
   gradingRubric?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  textKz?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  referenceAnswerKz?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  gradingRubricKz?: string | null;
 }
 
 export class PatchAdminAnswerDto {
@@ -167,6 +215,12 @@ export class PatchAdminAnswerDto {
   @IsOptional()
   @IsBoolean()
   isCorrect?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @IsString()
+  @MaxLength(2048)
+  textKz?: string | null;
 }
 
 export class CreateAdminAnswerDto {
@@ -177,6 +231,12 @@ export class CreateAdminAnswerDto {
 
   @IsBoolean()
   isCorrect: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @MaxLength(2048)
+  textKz?: string | null;
 }
 
 /** Ответ ИИ / ручной импорт вопросов в тест */
@@ -188,6 +248,12 @@ export class GeneratedAnswerInputDto {
 
   @IsBoolean()
   isCorrect: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @MaxLength(2048)
+  textKz?: string | null;
 }
 
 export class GeneratedQuestionInputDto {
@@ -197,6 +263,11 @@ export class GeneratedQuestionInputDto {
 
   @IsIn(['single', 'multiple'])
   type: 'single' | 'multiple';
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  textKz?: string | null;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -214,6 +285,12 @@ export class ApplyGeneratedQuizDto {
   @IsString()
   @MaxLength(512)
   quizTitle?: string;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @MaxLength(512)
+  quizTitleKz?: string | null;
 
   @IsOptional()
   @Type(() => Number)

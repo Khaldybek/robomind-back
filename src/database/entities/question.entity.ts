@@ -27,6 +27,9 @@ export class Question {
   @Column({ type: 'text' })
   text: string;
 
+  @Column({ name: 'text_kz', type: 'text', nullable: true })
+  textKz: string | null;
+
   @Column({
     type: 'enum',
     enum: QuestionType,
@@ -44,9 +47,15 @@ export class Question {
   @Column({ name: 'reference_answer', type: 'text', nullable: true })
   referenceAnswer: string | null;
 
+  @Column({ name: 'reference_answer_kz', type: 'text', nullable: true })
+  referenceAnswerKz: string | null;
+
   /** Критерии оценки (текст или JSON-строка для ИИ) */
   @Column({ name: 'grading_rubric', type: 'text', nullable: true })
   gradingRubric: string | null;
+
+  @Column({ name: 'grading_rubric_kz', type: 'text', nullable: true })
+  gradingRubricKz: string | null;
 
   @OneToMany(() => Answer, (a) => a.question)
   answers: Answer[];

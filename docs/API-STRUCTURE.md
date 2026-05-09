@@ -60,7 +60,7 @@
 | GET | `/app/courses/:courseId/modules` | Курс + **секции** (`modules[]` — модули курса, не уроки) |
 | GET | `/app/course-modules/:courseModuleId/lessons` | Уроки в секции |
 | GET | `/app/lessons/:lessonId/content` | Контент урока |
-| GET | `/app/lessons/:lessonId/quiz` | Тест (без `isCorrect` у ответов); `maxAttempts` — **эффективный** лимит (см. `maxAttemptsSource`: `user_quiz` \| `course_access` \| `course_default` \| `quiz`) |
+| GET | `/app/lessons/:lessonId/quiz` | Тест (без `isCorrect` у ответов); опц. `?lang=ru`\|`kk` — строки `title` / `text` / ответы на выбранном языке; в теле поле `language`. `maxAttempts` — эффективный лимит (см. `maxAttemptsSource`) |
 | PATCH | `/app/lessons/:lessonId/progress` | Обновление прогресса (`PatchModuleProgressDto`) |
 | POST | `/app/lessons/:lessonId/homework` | Сдача ДЗ: `multipart` поле `file`, опц. `comment` |
 | GET | `/app/lessons/:lessonId/homework` | Текущая сдача и оценка (`submission` или `null`) |
@@ -220,6 +220,8 @@
 | DELETE | `/admin/school-admins/:id` | Удалить |
 
 ### Тесты (квизы)
+
+Двуязычие (RU + казахский): в ответах и телах PATCH/POST доступны пары полей **`title` / `titleKz`**, **`text` / `textKz`**, **`referenceAnswer` / `referenceAnswerKz`**, **`gradingRubric` / `gradingRubricKz`** (казахские — опционально, `null` если нет).
 
 | Метод | Путь | Описание |
 |--------|------|----------|

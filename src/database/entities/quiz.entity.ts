@@ -27,6 +27,9 @@ export class Quiz {
   @Column({ type: 'varchar', length: 512 })
   title: string;
 
+  @Column({ name: 'title_kz', type: 'varchar', length: 512, nullable: true })
+  titleKz: string | null;
+
   @Column({ name: 'passing_score', type: 'int' })
   passingScore: number;
 
