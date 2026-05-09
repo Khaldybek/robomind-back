@@ -27,6 +27,7 @@ import {
   UserGamification,
   UserBadge,
   LessonHomeworkSubmission,
+  UserQuizMaxAttemptOverride,
 } from './entities';
 import { getRawPostgresDataSourceOptions } from './postgres-connection';
 import { InitialSchema1742274000000 } from './migrations/1742274000000-InitialSchema';
@@ -39,6 +40,7 @@ import { Gamification1742600000000 } from './migrations/1742600000000-Gamificati
 import { ModuleHomeworkSubmissions1742700000000 } from './migrations/1742700000000-ModuleHomeworkSubmissions';
 import { GamificationExpand1742800000000 } from './migrations/1742800000000-GamificationExpand';
 import { CourseModulesAndLessons1742900000000 } from './migrations/1742900000000-CourseModulesAndLessons';
+import { QuizAttemptLimits1743000000000 } from './migrations/1743000000000-QuizAttemptLimits';
 
 config({ path: join(__dirname, '../../.env') });
 
@@ -70,6 +72,7 @@ export default new DataSource({
     UserGamification,
     UserBadge,
     LessonHomeworkSubmission,
+    UserQuizMaxAttemptOverride,
   ],
   migrations: [
     InitialSchema1742274000000,
@@ -82,6 +85,7 @@ export default new DataSource({
     ModuleHomeworkSubmissions1742700000000,
     GamificationExpand1742800000000,
     CourseModulesAndLessons1742900000000,
+    QuizAttemptLimits1743000000000,
   ],
   synchronize: false,
   logging: process.env.TYPEORM_LOGGING === 'true',

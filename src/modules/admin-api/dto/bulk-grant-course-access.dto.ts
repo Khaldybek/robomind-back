@@ -6,7 +6,12 @@ import {
   IsOptional,
   IsDateString,
   IsUUID,
+  IsInt,
+  Min,
+  Max,
+  ValidateIf,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { CourseAccessType } from '../../../database/enums';
 
 export class BulkGrantCourseAccessDto {
@@ -22,4 +27,12 @@ export class BulkGrantCourseAccessDto {
   @IsOptional()
   @IsDateString()
   expiresAt?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  maxQuizAttempts?: number | null;
 }

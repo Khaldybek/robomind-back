@@ -27,6 +27,10 @@ import { SubmitQuizAttemptDto } from './dto/submit-quiz-attempt.dto';
 import { PatchModuleProgressDto } from './dto/patch-module-progress.dto';
 import { GamificationService } from '../gamification/gamification.service';
 import { AdminUploadService } from '../admin-api/admin-upload.service';
+import {
+  QuizAttemptLimitService,
+  type EffectiveQuizMaxAttempts,
+} from '../quiz/quiz-attempt-limit.service';
 
 @Injectable()
 export class AppStudentService {
@@ -59,6 +63,7 @@ export class AppStudentService {
     private readonly certificates: Repository<Certificate>,
     private readonly gamification: GamificationService,
     private readonly upload: AdminUploadService,
+    private readonly quizAttemptLimits: QuizAttemptLimitService,
   ) {}
 
   private accessWhere(userId: string) {
@@ -627,17 +632,20 @@ export class AppStudentService {
     return a;
   }
 
-  private quizToStudentJson(q: Quiz) {
+  private quizToStudentJson(q: Quiz, effective?: EffectiveQuizMaxAttempts) {
     let qs = [...(q.questions || [])].sort(
       (a, b) => a.order - b.order || a.id.localeCompare(b.id),
     );
     if (q.shuffleQuestions) qs = this.shuffle(qs);
+    const maxAttempts = effective?.value ?? q.maxAttempts;
+    const maxAttemptsSource = effective?.source;
     return {
       id: q.id,
       lessonId: q.lessonId,
       title: q.title,
       passingScore: q.passingScore,
-      maxAttempts: q.maxAttempts,
+      maxAttempts,
+      ...(maxAttemptsSource != null ? { maxAttemptsSource } : {}),
       timeLimitMinutes: q.timeLimitMinutes,
       shuffleQuestions: q.shuffleQuestions,
       createdAt: q.createdAt,
@@ -667,7 +675,11 @@ export class AppStudentService {
       relations: { questions: { answers: true } },
     });
     if (!q) throw new NotFoundException('Тест для урока не найден');
-    return this.quizToStudentJson(q);
+    const effective = await this.quizAttemptLimits.getEffectiveMaxAttempts(
+      userId,
+      q.id,
+    );
+    return this.quizToStudentJson(q, effective);
   }
 
   async startQuizAttempt(userId: string, quizId: string) {
@@ -678,8 +690,12 @@ export class AppStudentService {
     if (!quiz) throw new NotFoundException('Тест не найден');
     await this.assertLessonAccessible(userId, quiz.lessonId);
 
+    const effective = await this.quizAttemptLimits.getEffectiveMaxAttempts(
+      userId,
+      quizId,
+    );
     const n = await this.quizAttempts.count({ where: { quizId, userId } });
-    if (n >= quiz.maxAttempts) {
+    if (n >= effective.value) {
       throw new BadRequestException('Исчерпан лимит попыток');
     }
 

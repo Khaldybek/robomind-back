@@ -390,7 +390,7 @@
 
 ### `GET /app/lessons/:lessonId/quiz`
 
-**Ответ `200`:** объект квиза: `id`, **`lessonId`**, `title`, `passingScore`, `maxAttempts`, `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`.  
+**Ответ `200`:** объект квиза: `id`, **`lessonId`**, `title`, `passingScore`, **`maxAttempts`** (эффективный лимит для текущего ученика), опционально **`maxAttemptsSource`** (`user_quiz` \| `course_access` \| `course_default` \| `quiz`), `timeLimitMinutes`, `shuffleQuestions`, `createdAt`, `updatedAt`, `questions[]`. Подробнее о приоритете лимитов: `docs/API-QUIZ-ATTEMPT-LIMITS.txt`.  
 У каждого вопроса: `id`, `text`, `type` (`single` \| `multiple` \| `text`), `order`, `imageUrl`, **`answers`**: `[{ "id", "text", "createdAt", "updatedAt" }]` — **без** признака правильности.
 
 *(у `text` вопросов список `answers` может быть пустым)*
@@ -401,7 +401,7 @@
 
 ### `POST /app/quizzes/:quizId/attempt`
 
-| Вход | Путь: `quizId` (UUID). Тело не требуется. |
+| Вход | Путь: `quizId` (UUID). Тело не требуется. Лимит числа попыток совпадает с эффективным `maxAttempts` из `GET …/quiz` (см. `docs/API-QUIZ-ATTEMPT-LIMITS.txt`). |
 
 **Ответ `201`:**
 

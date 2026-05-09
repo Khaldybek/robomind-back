@@ -60,7 +60,7 @@
 | GET | `/app/courses/:courseId/modules` | Курс + **секции** (`modules[]` — модули курса, не уроки) |
 | GET | `/app/course-modules/:courseModuleId/lessons` | Уроки в секции |
 | GET | `/app/lessons/:lessonId/content` | Контент урока |
-| GET | `/app/lessons/:lessonId/quiz` | Тест (без `isCorrect` у ответов) |
+| GET | `/app/lessons/:lessonId/quiz` | Тест (без `isCorrect` у ответов); `maxAttempts` — **эффективный** лимит (см. `maxAttemptsSource`: `user_quiz` \| `course_access` \| `course_default` \| `quiz`) |
 | PATCH | `/app/lessons/:lessonId/progress` | Обновление прогресса (`PatchModuleProgressDto`) |
 | POST | `/app/lessons/:lessonId/homework` | Сдача ДЗ: `multipart` поле `file`, опц. `comment` |
 | GET | `/app/lessons/:lessonId/homework` | Текущая сдача и оценка (`submission` или `null`) |
@@ -148,6 +148,9 @@
 | GET | `/admin/users/:userId/progress` | Прогресс |
 | GET | `/admin/users/:userId/certificates` | Сертификаты |
 | GET | `/admin/users/:userId/quiz-attempts` | Попытки квизов ученика |
+| GET | `/admin/users/:userId/quiz-attempt-limits` | Переопределения лимита попыток по тестам (`?courseId`, `?page`, `?limit`) |
+| PUT | `/admin/users/:userId/quiz-attempt-limits/:quizId` | Тело `{ maxAttempts }` (1–99): лимит «ученик + тест» |
+| DELETE | `/admin/users/:userId/quiz-attempt-limits/:quizId` | Снять переопределение |
 
 ### Гео и школы (`/admin/cities`, …)
 
@@ -168,13 +171,14 @@
 | GET | `/admin/courses` | Список |
 | POST | `/admin/courses` | Создать (JSON или multipart + `thumbnail`) |
 | GET | `/admin/courses/:courseId` | Детали |
-| PATCH | `/admin/courses/:courseId` | Обновить (JSON или multipart + `thumbnail`) |
+| PATCH | `/admin/courses/:courseId` | Обновить (JSON или multipart + `thumbnail`); опц. `defaultMaxQuizAttempts` (1–99 или `null`) — **только `super_admin`** |
 | DELETE | `/admin/courses/:courseId` | Удалить |
 | GET | `/admin/courses/:courseId/modules` | Секции курса (модули курса), пагинация |
 | POST | `/admin/courses/:courseId/modules` | Создать секцию (`super_admin`) |
 | GET | `/admin/courses/:courseId/accesses` | Доступы |
-| POST | `/admin/courses/:courseId/access` | Выдать доступ |
-| POST | `/admin/courses/:courseId/access/bulk` | Массовая выдача доступа |
+| POST | `/admin/courses/:courseId/access` | Выдать доступ (опц. `maxQuizAttempts` 1–99 или `null` на запись доступа) |
+| POST | `/admin/courses/:courseId/access/bulk` | Массовая выдача доступа (опц. `maxQuizAttempts`) |
+| PATCH | `/admin/courses/:courseId/access/:userId` | Активный доступ: `{ maxQuizAttempts }` (число или `null`) |
 | DELETE | `/admin/courses/:courseId/access/:userId` | Отозвать |
 | GET | `/admin/courses/:courseId/students` | Ученики курса |
 
@@ -182,15 +186,15 @@
 
 | Метод | Путь | Роль | Описание |
 |--------|------|------|----------|
-| GET | `/admin/course-modules/:courseModuleId` | `super_admin` | Одна секция |
+| GET | `/admin/course-modules/:courseModuleId` | `super_admin` \| `school_admin` (чтение: курс опубликован; секция в т.ч. черновик) | Одна секция |
 | PATCH | `/admin/course-modules/:courseModuleId` | `super_admin` | Обновить секцию |
 | DELETE | `/admin/course-modules/:courseModuleId` | `super_admin` | Удалить секцию |
-| GET | `/admin/lessons` | `super_admin` | Список уроков (query `courseModuleId`, пагинация) |
+| GET | `/admin/lessons` | `super_admin` \| `school_admin` (чтение: курс опубликован; уроки в т.ч. черновики) | Список уроков (query `courseModuleId`, пагинация) |
 | POST | `/admin/lessons` | `super_admin` | Создать урок в секции |
-| GET | `/admin/lessons/:lessonId` | `super_admin` | Урок |
+| GET | `/admin/lessons/:lessonId` | `super_admin` \| `school_admin` (чтение, см. выше) | Урок |
 | PATCH | `/admin/lessons/:lessonId` | `super_admin` | Обновить урок |
 | DELETE | `/admin/lessons/:lessonId` | `super_admin` | Удалить урок |
-| GET | `/admin/lessons/:lessonId/contents` | `super_admin` | Контент урока |
+| GET | `/admin/lessons/:lessonId/contents` | `super_admin` \| `school_admin` (полные блоки: `content`, `fileUrl`, …) | Контент урока |
 | POST | `/admin/lessons/:lessonId/contents` | `super_admin` | Добавить блок |
 | POST | `/admin/lessons/:lessonId/contents/from-file` | `super_admin` | Блок из файла |
 | POST | `/admin/lessons/:lessonId/content` | `super_admin` | (алиас POST contents) |
@@ -219,7 +223,7 @@
 
 | Метод | Путь | Описание |
 |--------|------|----------|
-| GET | `/admin/lessons/:lessonId/quiz` | Тест урока |
+| GET | `/admin/lessons/:lessonId/quiz` | `super_admin` \| `school_admin` (чтение) | Тест урока (в т.ч. `isCorrect` у ответов) |
 | POST | `/admin/lessons/:lessonId/quiz/import-generated` | Импорт вопросов из ИИ |
 | POST | `/admin/lessons/:lessonId/quiz` | Создать тест |
 | POST | `/admin/quizzes/:quizId/questions` | Добавить вопрос |

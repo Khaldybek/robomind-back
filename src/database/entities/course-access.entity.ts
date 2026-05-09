@@ -53,6 +53,13 @@ export class CourseAccess {
   @Column({ name: 'revoked_at', type: 'timestamptz', nullable: true })
   revokedAt: Date | null;
 
+  /**
+   * Лимит попыток для всех квизов курса у этого ученика (NULL — не задан,
+   * используется цепочка default курса / quizzes.max_attempts).
+   */
+  @Column({ name: 'max_quiz_attempts', type: 'int', nullable: true })
+  maxQuizAttempts: number | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

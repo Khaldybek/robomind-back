@@ -24,6 +24,7 @@ import { AppLessonsController } from './app-lessons.controller';
 import { AppQuizController } from './app-quiz.controller';
 import { AppStudentService } from './app-student.service';
 import { AdminUploadService } from '../admin-api/admin-upload.service';
+import { QuizModule } from '../quiz/quiz.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AdminUploadService } from '../admin-api/admin-upload.service';
     AuthModule,
     GamificationModule,
     HomeworkModule,
+    QuizModule,
   ],
   controllers: [
     AppGeoController,

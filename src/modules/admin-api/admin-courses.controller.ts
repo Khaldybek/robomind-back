@@ -40,6 +40,7 @@ import {
 import {
   GrantCourseAccessDto,
   ListCourseAccessesQueryDto,
+  PatchCourseAccessDto,
 } from './dto/admin-course-access.dto';
 import { BulkGrantCourseAccessDto } from './dto/bulk-grant-course-access.dto';
 import { AdminUploadService } from './admin-upload.service';
@@ -163,6 +164,16 @@ export class AdminCoursesController {
     @Body() dto: GrantCourseAccessDto,
   ) {
     return this.courseAccess.grantAccess(courseId, dto, user);
+  }
+
+  @Patch(':courseId/access/:userId')
+  patchCourseAccess(
+    @CurrentUser() user: AuthUserPayload,
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: PatchCourseAccessDto,
+  ) {
+    return this.courseAccess.patchCourseAccess(courseId, userId, dto, user);
   }
 
   @Delete(':courseId/access/:userId')

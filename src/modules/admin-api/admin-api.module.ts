@@ -15,6 +15,7 @@ import { Quiz } from '../../database/entities/quiz.entity';
 import { Question } from '../../database/entities/question.entity';
 import { Answer } from '../../database/entities/answer.entity';
 import { QuizAttempt } from '../../database/entities/quiz-attempt.entity';
+import { UserQuizMaxAttemptOverride } from '../../database/entities/user-quiz-max-attempt-override.entity';
 import { DeviceAccessViolation } from '../../database/entities/device-access-violation.entity';
 import { AdminNotification } from '../../database/entities/admin-notification.entity';
 import { AuthModule } from '../auth/auth.module';
@@ -32,6 +33,7 @@ import { AdminUploadService } from './admin-upload.service';
 import { AdminSchoolAdminsController } from './admin-school-admins.controller';
 import { AdminSchoolAdminsService } from './admin-school-admins.service';
 import { AdminUsersService } from './admin-users.service';
+import { AdminQuizAttemptLimitsService } from './admin-quiz-attempt-limits.service';
 import { AdminCourseAccessService } from './admin-course-access.service';
 import { AdminQuizController } from './admin-quiz.controller';
 import { AdminQuizService } from './admin-quiz.service';
@@ -43,6 +45,8 @@ import { AdminMySchoolController } from './admin-my-school.controller';
 import { AdminSchoolStatsController } from './admin-school-stats.controller';
 import { AdminSchoolStatsService } from './admin-school-stats.service';
 import { AdminMeController } from './admin-me.controller';
+import { AdminFormOptionsController } from './admin-form-options.controller';
+import { AdminFormOptionsService } from './admin-form-options.service';
 import { HomeworkModule } from '../homework/homework.module';
 import { GamificationModule } from '../gamification/gamification.module';
 
@@ -64,6 +68,7 @@ import { GamificationModule } from '../gamification/gamification.module';
       Question,
       Answer,
       QuizAttempt,
+      UserQuizMaxAttemptOverride,
       DeviceAccessViolation,
       AdminNotification,
     ]),
@@ -85,6 +90,7 @@ import { GamificationModule } from '../gamification/gamification.module';
     AdminMySchoolController,
     AdminSchoolStatsController,
     AdminMeController,
+    AdminFormOptionsController,
   ],
   providers: [
     AdminGeoService,
@@ -94,11 +100,13 @@ import { GamificationModule } from '../gamification/gamification.module';
     AdminUploadService,
     AdminSchoolAdminsService,
     AdminUsersService,
+    AdminQuizAttemptLimitsService,
     AdminCourseAccessService,
     AdminQuizService,
     AdminCertificatesService,
     AdminStatsService,
     AdminSchoolStatsService,
+    AdminFormOptionsService,
   ],
 })
 export class AdminApiModule {}

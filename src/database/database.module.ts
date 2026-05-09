@@ -26,6 +26,7 @@ import {
   LessonHomeworkSubmission,
   UserGamification,
   UserBadge,
+  UserQuizMaxAttemptOverride,
 } from './entities';
 import { typeOrmPostgresOptionsFromConfig } from './postgres-connection';
 
@@ -54,6 +55,7 @@ const entities = [
   LessonHomeworkSubmission,
   UserGamification,
   UserBadge,
+  UserQuizMaxAttemptOverride,
 ];
 
 @Module({

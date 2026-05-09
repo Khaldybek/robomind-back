@@ -156,4 +156,13 @@ export class PatchAdminCourseDto {
   @IsString()
   @MaxLength(64)
   ageGroup?: string | null;
+
+  /** Дефолтный лимит попыток квиза для учеников курса (1–99); null — не использовать дефолт курса. */
+  @IsOptional()
+  @ValidateIf((_, v) => v != null)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  defaultMaxQuizAttempts?: number | null;
 }

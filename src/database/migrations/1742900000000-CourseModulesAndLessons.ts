@@ -8,6 +8,17 @@ export class CourseModulesAndLessons1742900000000 implements MigrationInterface 
   name = 'CourseModulesAndLessons1742900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const [{ exists }]: { exists: boolean }[] = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'lessons'
+      ) AS "exists"
+    `);
+    if (exists) {
+      /* Схема уже как после миграции (например поднимали БД через synchronize) — только запись в migrations. */
+      return;
+    }
+
     await queryRunner.query(`
       CREATE TABLE "course_modules" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),

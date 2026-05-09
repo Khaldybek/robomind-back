@@ -27,6 +27,7 @@ export type AdminCourseRow = {
   updatedAt: Date;
   thumbnailUrl: string | null;
   ageGroup: string | null;
+  defaultMaxQuizAttempts: number | null;
   /** Всего уроков в курсе (по всем модулям курса) */
   moduleCount: number;
   /** Секций курса (модулей курса) */
@@ -58,6 +59,7 @@ export class AdminCoursesService {
       updatedAt: c.updatedAt,
       thumbnailUrl: c.thumbnailUrl,
       ageGroup: c.ageGroup,
+      defaultMaxQuizAttempts: c.defaultMaxQuizAttempts ?? null,
       moduleCount,
       courseModuleCount,
       studentsCount,
@@ -248,6 +250,9 @@ export class AdminCoursesService {
       c.thumbnailUrl = dto.thumbnailUrl?.trim() || null;
     if (dto.ageGroup !== undefined)
       c.ageGroup = dto.ageGroup === null ? null : dto.ageGroup?.trim() || null;
+    if (dto.defaultMaxQuizAttempts !== undefined) {
+      c.defaultMaxQuizAttempts = dto.defaultMaxQuizAttempts;
+    }
     await this.courses.save(c);
     return this.getCourse(id, actor);
   }

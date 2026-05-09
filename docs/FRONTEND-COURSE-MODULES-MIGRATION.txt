@@ -354,19 +354,27 @@ GET /admin/users/:userId/quiz-attempts
 5. РОЛЬ: АДМИНИСТРАТОР ШКОЛЫ (school_admin)
 --------------------------------------------------------------------------------
 
-Часть маршрутов совпадает с super_admin по URL, но с ограничениями:
+Часть маршрутов совпадает с super_admin по URL, но с ограничениями.
 
   — GET /admin/courses/:courseId/modules — только опубликованные секции
-    (тот же путь, что у super_admin, но read-only фильтр).
+    и только если курс опубликован (тот же путь, что у super_admin).
 
-  — CRUD секций и уроков через /admin/course-modules/... и /admin/lessons/...
-    в типовой конфигурации рассчитаны на super_admin; у school_admin свой
-    набор разрешённых операций — сверяйте с docs/API-SCHOOL-ADMIN-BACKEND.md
-    и фактическими @Roles в контроллерах.
+  — ЧТЕНИЕ материалов курса (опубликованный курс + опубликованная секция
+    + опубликованный урок):
+      GET /admin/course-modules/:courseModuleId  — одна секция
+      GET /admin/lessons?courseModuleId=...     — список уроков (только isPublished)
+      GET /admin/lessons/:lessonId              — карточка урока
+      GET /admin/lessons/:lessonId/contents     — блоки контента
+      GET /admin/lessons/:lessonId/quiz         — полный тест (с правильными
+        ответами, как у super_admin)
+    Для черновиков / неопубликованного — ответ 404 «не найден».
+
+  — Запись (создание/правка/удаление секций, уроков, контента, квизов) —
+    только super_admin (school_admin получит 403).
 
   — GET /admin/homework-submissions, PATCH .../homework-submissions/:id,
-    GET /admin/lessons/:lessonId/grade-overview — доступны с ролью
-    school_admin в пределах своей школы (как и раньше по смыслу).
+    GET /admin/lessons/:lessonId/grade-overview — доступны school_admin
+    в пределах своей школы (как и раньше по смыслу).
 
 
 --------------------------------------------------------------------------------

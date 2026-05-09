@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Course } from '../../database/entities/course.entity';
 import { User } from '../../database/entities/user.entity';
 import { CourseAccess } from '../../database/entities/course-access.entity';
@@ -13,6 +14,7 @@ import { UserRole } from '../../database/enums';
 import {
   GrantCourseAccessDto,
   ListCourseAccessesQueryDto,
+  PatchCourseAccessDto,
 } from './dto/admin-course-access.dto';
 import { BulkGrantCourseAccessDto } from './dto/bulk-grant-course-access.dto';
 import type { AuthUserPayload } from '../auth/decorators/current-user.decorator';
@@ -69,6 +71,9 @@ export class AdminCourseAccessService {
       existing.accessType = dto.accessType;
       existing.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
       existing.grantedBy = grantedBy;
+      if (dto.maxQuizAttempts !== undefined) {
+        existing.maxQuizAttempts = dto.maxQuizAttempts;
+      }
       await this.accesses.save(existing);
       const reloaded = await this.accesses.findOne({
         where: { id: existing.id },
@@ -83,6 +88,8 @@ export class AdminCourseAccessService {
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       revokedAt: null,
       grantedBy,
+      maxQuizAttempts:
+        dto.maxQuizAttempts !== undefined ? dto.maxQuizAttempts : null,
     });
     await this.accesses.save(row);
     const full = await this.accesses.findOne({
@@ -125,6 +132,7 @@ export class AdminCourseAccessService {
             userId,
             accessType: dto.accessType,
             expiresAt: dto.expiresAt,
+            maxQuizAttempts: dto.maxQuizAttempts,
           },
           actor,
         );
@@ -150,6 +158,7 @@ export class AdminCourseAccessService {
       accessType: a.accessType,
       expiresAt: a.expiresAt,
       revokedAt: a.revokedAt,
+      maxQuizAttempts: a.maxQuizAttempts,
       grantedBy: a.grantedBy,
       createdAt: a.createdAt,
       user: a.user
@@ -209,6 +218,48 @@ export class AdminCourseAccessService {
       limit,
       totalPages: Math.ceil(total / limit) || 1,
     };
+  }
+
+  async patchCourseAccess(
+    courseId: string,
+    userId: string,
+    dto: PatchCourseAccessDto,
+    actor: AuthUserPayload,
+  ) {
+    if (dto.maxQuizAttempts === undefined) {
+      throw new BadRequestException('Укажите поле maxQuizAttempts');
+    }
+    const course = await this.courses.findOne({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Курс не найден');
+    if (actor.role === UserRole.SCHOOL_ADMIN) {
+      if (!actor.schoolId) {
+        throw new ForbiddenException(
+          'У администратора школы не задан schoolId',
+        );
+      }
+      if (!course.isPublished) {
+        throw new NotFoundException('Курс не найден');
+      }
+    }
+    const u = await this.users.findOne({ where: { id: userId } });
+    if (!u) throw new NotFoundException('Пользователь не найден');
+    if (actor.role === UserRole.SCHOOL_ADMIN) {
+      if (
+        !actor.schoolId ||
+        u.schoolId !== actor.schoolId ||
+        u.role !== UserRole.STUDENT
+      ) {
+        throw new ForbiddenException('Нет доступа к этому пользователю');
+      }
+    }
+    const row = await this.accesses.findOne({
+      where: { courseId, userId, revokedAt: IsNull() },
+      relations: { user: true, grantedByUser: true },
+    });
+    if (!row) throw new NotFoundException('Активный доступ к курсу не найден');
+    row.maxQuizAttempts = dto.maxQuizAttempts;
+    await this.accesses.save(row);
+    return this.mapAccess(row);
   }
 
   async revokeAccess(courseId: string, userId: string, actor: AuthUserPayload) {

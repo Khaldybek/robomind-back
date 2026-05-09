@@ -29,7 +29,12 @@ import {
   type AuthUserPayload,
 } from '../auth/decorators/current-user.decorator';
 import { AdminUsersService } from './admin-users.service';
+import { AdminQuizAttemptLimitsService } from './admin-quiz-attempt-limits.service';
 import { ListAdminUsersQueryDto, PutAdminUserDto } from './dto/admin-users.dto';
+import {
+  ListQuizAttemptLimitsQueryDto,
+  PutUserQuizAttemptLimitDto,
+} from './dto/admin-quiz-attempt-limits.dto';
 
 const STUDENT_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -37,7 +42,10 @@ const STUDENT_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
 export class AdminUsersController {
-  constructor(private readonly users: AdminUsersService) {}
+  constructor(
+    private readonly users: AdminUsersService,
+    private readonly quizAttemptLimits: AdminQuizAttemptLimitsService,
+  ) {}
 
   @Get()
   list(
@@ -113,6 +121,35 @@ export class AdminUsersController {
     @CurrentUser() actor: AuthUserPayload,
   ) {
     return this.users.getUserQuizAttempts(userId, actor);
+  }
+
+  @Get(':userId/quiz-attempt-limits')
+  listQuizAttemptLimits(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() q: ListQuizAttemptLimitsQueryDto,
+    @CurrentUser() actor: AuthUserPayload,
+  ) {
+    return this.quizAttemptLimits.list(userId, q, actor);
+  }
+
+  @Put(':userId/quiz-attempt-limits/:quizId')
+  putQuizAttemptLimit(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('quizId', ParseUUIDPipe) quizId: string,
+    @Body() dto: PutUserQuizAttemptLimitDto,
+    @CurrentUser() actor: AuthUserPayload,
+  ) {
+    return this.quizAttemptLimits.put(userId, quizId, dto.maxAttempts, actor);
+  }
+
+  @Delete(':userId/quiz-attempt-limits/:quizId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteQuizAttemptLimit(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('quizId', ParseUUIDPipe) quizId: string,
+    @CurrentUser() actor: AuthUserPayload,
+  ) {
+    await this.quizAttemptLimits.remove(userId, quizId, actor);
   }
 
   @Get(':userId')

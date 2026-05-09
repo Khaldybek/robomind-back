@@ -1,0 +1,22 @@
+Лимиты попыток квиза (эффективное значение для ученика)
+=====================================================
+
+Приоритет (сверху вниз):
+1. Переопределение ученик + тест (таблица user_quiz_max_attempt_overrides)
+2. Лимит на записи доступа к курсу (course_accesses.max_quiz_attempts)
+3. Дефолт курса для всех (courses.default_max_quiz_attempts)
+4. Поле теста (quizzes.max_attempts)
+
+Студент (GET /app/lessons/:lessonId/quiz, POST /app/quizzes/:quizId/attempt)
+---------------------------------------------------------------------------
+- Читает эффективный maxAttempts и при необходимости maxAttemptsSource.
+- Начало попытки учитывает тот же эффективный лимит.
+
+Матрица ролей админки
+---------------------
+| Действие | super_admin | school_admin |
+| PATCH курса defaultMaxQuizAttempts | да | нет |
+| POST/PATCH доступа с maxQuizAttempts | да | да (своя школа, опубликованный курс, ученик своей школы) |
+| GET/PUT/DELETE …/quiz-attempt-limits | да | да (только ученик student своей школы) |
+
+Валидация: целое от 1 до 99 (в DTO).

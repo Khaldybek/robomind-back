@@ -231,7 +231,7 @@ export class AdminLessonsService {
     });
     if (!cm) throw new NotFoundException('Модуль курса не найден');
     if (opts?.schoolAdminReadOnly) {
-      if (!cm.course?.isPublished || !cm.isPublished) {
+      if (!cm.course?.isPublished) {
         throw new NotFoundException('Модуль курса не найден');
       }
     }
@@ -245,9 +245,7 @@ export class AdminLessonsService {
     if (q.search?.trim()) {
       qb.andWhere('l.title ILIKE :s', { s: `%${q.search.trim()}%` });
     }
-    if (opts?.schoolAdminReadOnly) {
-      qb.andWhere('l.is_published = true');
-    } else if (q.isPublished !== undefined) {
+    if (!opts?.schoolAdminReadOnly && q.isPublished !== undefined) {
       qb.andWhere('l.is_published = :pub', { pub: q.isPublished });
     }
     const total = await qb.getCount();
@@ -352,7 +350,10 @@ export class AdminLessonsService {
     return l;
   }
 
-  /** Школьный админ видит только опубликованный курс + секцию + урок (как у студента по смыслу). */
+  /**
+   * Школьный админ: просмотр материалов только в рамках опубликованного каталога курса;
+   * черновики секций/уроков и полный контент блоков — разрешены (как превью для школы).
+   */
   private async assertSchoolAdminCanReadLesson(lessonId: string): Promise<Lesson> {
     const l = await this.lessons.findOne({
       where: { id: lessonId },
@@ -360,7 +361,7 @@ export class AdminLessonsService {
     });
     if (!l) throw new NotFoundException('Урок не найден');
     const c = l.courseModule?.course;
-    if (!c?.isPublished || !l.courseModule.isPublished || !l.isPublished) {
+    if (!c?.isPublished) {
       throw new NotFoundException('Урок не найден');
     }
     return l;

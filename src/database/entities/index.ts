@@ -22,3 +22,4 @@ export { PasswordResetToken } from './password-reset-token.entity';
 export { UserGamification } from './user-gamification.entity';
 export { UserBadge } from './user-badge.entity';
 export { LessonHomeworkSubmission } from './lesson-homework-submission.entity';
+export { UserQuizMaxAttemptOverride } from './user-quiz-max-attempt-override.entity';

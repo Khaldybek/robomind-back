@@ -40,7 +40,7 @@ export class AdminQuizService {
     return l;
   }
 
-  /** Для school_admin: только опубликованный курс + секция + урок. */
+  /** Для school_admin: курс в каталоге опубликован; черновики секции/урока допускаются для просмотра. */
   private async assertSchoolAdminCanReadLesson(lessonId: string): Promise<void> {
     const l = await this.lessons.findOne({
       where: { id: lessonId },
@@ -48,7 +48,7 @@ export class AdminQuizService {
     });
     if (!l) throw new NotFoundException('Урок не найден');
     const c = l.courseModule?.course;
-    if (!c?.isPublished || !l.courseModule.isPublished || !l.isPublished) {
+    if (!c?.isPublished) {
       throw new NotFoundException('Урок не найден');
     }
   }

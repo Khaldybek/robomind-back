@@ -50,6 +50,17 @@ export class Course {
   @Column({ type: 'int', default: 0 })
   order: number;
 
+  /**
+   * Дефолтный лимит попыток квиза для всех учеников курса, если не задан
+   * override на доступе или паре user+quiz.
+   */
+  @Column({
+    name: 'default_max_quiz_attempts',
+    type: 'int',
+    nullable: true,
+  })
+  defaultMaxQuizAttempts: number | null;
+
   @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy: string | null;
 

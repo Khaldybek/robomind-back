@@ -439,11 +439,27 @@
 
 ### `GET /admin/courses/:courseId/modules`
 
-Список **опубликованных** модулей опубликованного курса.
+Список **всех секций (модулей) курса** при условии, что курс **опубликован** в каталоге — в том числе с `isPublished: false` (черновики), чтобы школа могла просмотреть полную структуру перед выдачей доступа.
 
-**Query:** `page`, `limit`, `search`, `sort` (как в админке модулей). Фильтр `isPublished` с клиента не требуется.
+**Query:** `page`, `limit`, `search`, `sort` (как в админке модулей).
 
-**Ответ `200`:** `{ items[], total, page, limit, totalPages }` с полями модуля (`id`, `courseId`, `title`, `description`, `order`, `isPublished`, `unlockAfterModuleId`, `contentCount`, `progressCount`, `hasQuiz`, `quizId`, даты).
+**Ответ `200`:** `{ items[], total, page, limit, totalPages }` с полями модуля (`id`, `courseId`, `title`, `description`, `order`, `isPublished`, `unlockAfterCourseModuleId`, `lessonCount`, даты).
+
+---
+
+### Просмотр материалов уроков (`school_admin`, только чтение)
+
+Доступно при **опубликованном курсе** (`courses.is_published = true`). Статусы **секции** и **урока** (`isPublished`) не ограничивают чтение: видны черновики так же, как опубликованные.
+
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| GET | `/admin/course-modules/:courseModuleId` | Карточка секции (в т.ч. черновик), если курс опубликован |
+| GET | `/admin/lessons?courseModuleId=…` | Список **всех** уроков секции (в т.ч. черновики) |
+| GET | `/admin/lessons/:lessonId` | Метаданные урока: `id`, `courseModuleId`, `title`, `description`, `order`, `isPublished`, `unlockAfterLessonId`, `contentCount`, `progressCount`, `hasQuiz`, `quizId`, даты |
+| GET | `/admin/lessons/:lessonId/contents` | Блоки контента **полностью**, как у супер-админа при чтении: `id`, `lessonId`, `type`, `title`, **`content`** (HTML/текст), **`fileUrl`**, `duration`, `order`, `livestreamUrl`, `livestreamStartsAt`, `createdAt`, `updatedAt` |
+| GET | `/admin/lessons/:lessonId/quiz` | Тест с вопросами и **`isCorrect`** у вариантов ответа (для проверки методички) |
+
+Запись контента, PATCH/DELETE уроков и квиза — по-прежнему **только `super_admin`**.
 
 ---
 

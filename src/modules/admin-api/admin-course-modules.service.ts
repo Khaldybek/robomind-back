@@ -142,9 +142,7 @@ export class AdminCourseModulesService {
     if (q.search?.trim()) {
       qb.andWhere('cm.title ILIKE :s', { s: `%${q.search.trim()}%` });
     }
-    if (opts?.schoolAdminReadOnly) {
-      qb.andWhere('cm.is_published = true');
-    } else if (q.isPublished !== undefined) {
+    if (!opts?.schoolAdminReadOnly && q.isPublished !== undefined) {
       qb.andWhere('cm.is_published = :pub', { pub: q.isPublished });
     }
     const total = await qb.getCount();
@@ -173,7 +171,7 @@ export class AdminCourseModulesService {
     });
     if (!cm) throw new NotFoundException('Модуль курса не найден');
     if (opts?.schoolAdminReadOnly) {
-      if (!cm.course?.isPublished || !cm.isPublished) {
+      if (!cm.course?.isPublished) {
         throw new NotFoundException('Модуль курса не найден');
       }
     }
